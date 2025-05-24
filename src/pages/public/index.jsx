@@ -1,0 +1,14 @@
+export { default as HomePage } from "./Home";
+export { default as IntroducePage } from "./Introduce/Introduce";
+export { default as FQAPage } from "./FQA";
+export { default as OutServicePage } from "./OurService";
+export { default as ProductsPage } from "./Products";
+export { default as CouponPage } from "./Coupons";
+export { default as ContactPage } from "./Contact";
+export { default as DetailProductPage } from "./DetailProduct";
+export { default as BlogsPage } from "./Blog";
+export { default as DetailBlogPage } from "./BlogDetail";
+export { default as LoginPage } from "./Login";
+export { default as ConfirmRegisterPage } from "./ConfirmRegister";
+export { default as ForgotPasswordPage } from "./ForgotPassword";
+export { default as CheckoutPage } from "./CheckOut";
