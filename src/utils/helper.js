@@ -114,3 +114,9 @@ export const cleanEmptyDataObject = (data) => {
     return acc;
   }, {});
 };
+
+export const cleanHTML = (rawHtml) => {
+  const tempElement = document.createElement("div");
+  tempElement.innerHTML = rawHtml;
+  return tempElement.textContent || tempElement.innerText || "";
+}

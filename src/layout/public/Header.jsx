@@ -10,7 +10,6 @@ import { Badge, Modal, Tooltip } from "antd";
 import Button from "components/Button";
 import { logoutRequest } from "store/slicers/auth.slicer";
 import SearchModal from "./SearchModal";
-
 const Menu = [
   { id: 1, name: "Trang chủ", link: paths.HOME },
   { id: 2, name: "Sản phẩm", link: paths.PRODUCTS },
@@ -65,7 +64,7 @@ const Header = () => {
         <div>
           <div className="container flex justify-between items-center ">
             <div>
-              <a href="#" className="flex gap-2 items-center">
+              <a onClick={() => navigate(paths.HOME)} className="flex gap-2 items-center">
                 <img src={Logo} alt="Logo" className="w-16 " />
               </a>
             </div>

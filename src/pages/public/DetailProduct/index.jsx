@@ -16,10 +16,10 @@ import RentalForm from "components/RentalForm";
 
 const DetailProduct = ({ checkLoginBeforeAction, dispatch, navigate }) => {
   const location = useLocation();
-  const { productData } = location.state;
+  const { productData } = location?.state || {};
   const [selectedATT, setSelectedATT] = useState({});
   const [quantity, setQuantity] = useState(1);
-  const [selectedSku, setSelectedSku] = useState(productData.skus[0]);
+  const [selectedSku, setSelectedSku] = useState(productData?.skus[0] || {});
   const { isLogged } = useSelector((state) => state.auth);
   const [selectedImage, setSelectedImage] = useState(
     selectedSku?.images?.split(",")[0],

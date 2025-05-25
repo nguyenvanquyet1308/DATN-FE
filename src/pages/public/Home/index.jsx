@@ -2,6 +2,7 @@ import React from "react";
 import TopProducts from "./TopProducts";
 import Banner from "./Banner";
 import BlogHome from "./BlogHome";
+import ChatBox from "../../../components/ChatBox/ChatBox";
 
 function Home() {
   return (
@@ -9,6 +10,7 @@ function Home() {
       <TopProducts />
       <Banner />
       <BlogHome />
+      <ChatBox />
     </div>
   );
 }

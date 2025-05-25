@@ -13,7 +13,7 @@ import VoucherForm from "../VoucherForm";
 import CouponCard from "../VoucherForm/Coupon";
 
 function RentalPayment({ dispatch, navigate, location }) {
-  const data = location.state;
+  const data = location?.state;
   console.log("🚀 ~ RentalPayment ~ data:", data);
 
   const calTotalRental = (rentalData) => {
