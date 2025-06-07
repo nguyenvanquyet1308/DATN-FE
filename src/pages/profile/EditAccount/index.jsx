@@ -1,11 +1,36 @@
 import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { notification } from "antd";
+import { 
+  notification, 
+  Form, 
+  Input, 
+  Button, 
+  Avatar, 
+  Typography, 
+  Card, 
+  Upload, 
+  Space, 
+  Divider, 
+  message,
+  Tooltip 
+} from "antd";
+import { 
+  UserOutlined, 
+  MailOutlined, 
+  PhoneOutlined, 
+  EditOutlined, 
+  SaveOutlined, 
+  CloseOutlined,
+  UploadOutlined,
+  CameraOutlined
+} from '@ant-design/icons';
 import { convertImageToBase64 } from "utils/helper";
 import { updateInfoUser } from "apis/user.api";
 import { getUserInfoRequest } from "store/slicers/auth.slicer";
-import { useForm } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form";
 import { changeLoading } from "store/slicers/common.slicer";
+
+const { Title, Text } = Typography;
 
 function EditAccount() {
   const userInfo = useSelector((state) => state.auth.userInfo.data);
@@ -15,7 +40,7 @@ function EditAccount() {
     handleSubmit,
     formState: { errors },
     setValue,
-    reset,
+    control,
   } = useForm();
 
   const [isEditing, setIsEditing] = useState(false);
@@ -34,12 +59,17 @@ function EditAccount() {
 
   const handleAvatarChange = async (file) => {
     if (file.type !== "image/png" && file.type !== "image/jpeg") {
-      notification.error({ message: "File không được hỗ trợ." });
+      notification.error({ 
+        message: "File không được hỗ trợ",
+        description: "Chỉ hỗ trợ file PNG hoặc JPEG",
+        placement: "top" 
+      });
       return;
     }
     const base64 = await convertImageToBase64(file);
     setAvatarPreview(base64);
     setAvatarFile(file);
+    message.success("Ảnh đại diện đã được tải lên");
   };
 
   const onSubmit = async (data) => {
@@ -53,128 +83,208 @@ function EditAccount() {
 
     try {
       await updateInfoUser(userInfo.id, updatedData);
-      notification.success({ message: "Cập nhật thành công!" });
+      notification.success({ 
+        message: "Cập nhật thành công!", 
+        placement: "top",
+        duration: 3 
+      });
       dispatch(getUserInfoRequest());
       setIsEditing(false);
     } catch (error) {
-      notification.error({ message: "Cập nhật thất bại!" });
+      notification.error({ 
+        message: "Cập nhật thất bại!",
+        description: error?.message || "Đã có lỗi xảy ra",
+        placement: "top" 
+      });
     }
     dispatch(changeLoading());
   };
 
   return (
-    <div className="flex flex-col items-center p-8">
-      <div className="w-full max-w-2xl bg-white p-10 rounded-2xl shadow-2xl border border-[#D1BFAF]">
-        <h1 className="text-4xl font-bold text-center text-[#8B5E34] mb-8">
-          My Profile
-        </h1>
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-          {/* Avatar Input */}
-          <div className="flex flex-col items-center mb-6">
-            <label
-              htmlFor="avatar"
-              className="cursor-pointer w-32 h-32 rounded-full border-2 border-[#9C7653] shadow-md overflow-hidden flex justify-center items-center"
-            >
-              {avatarPreview ? (
-                <img
-                  src={avatarPreview}
-                  alt="Avatar"
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <span className="text-gray-500">Chọn ảnh</span>
-              )}
-            </label>
-            {isEditing && (
-              <input
-                type="file"
-                id="avatar"
-                accept=".jpg, .jpeg, .png"
-                onChange={(e) => handleAvatarChange(e.target.files[0])}
-                className="hidden"
+    <div className="profile-edit-container">
+      <Card 
+        className="shadow-sm hover:shadow-md transition-shadow duration-300"
+        bordered={false}
+      >
+        <div className="text-center mb-6">
+          <Title level={2} className="text-blue-600 mb-0">Thông Tin Tài Khoản</Title>
+          <Text type="secondary">Quản lý thông tin cá nhân của bạn</Text>
+        </div>
+        
+        <div className="flex flex-col md:flex-row gap-8">
+          {/* Avatar Section */}
+          <div className="flex flex-col items-center">
+            <div className="relative mb-4">
+              <Avatar 
+                size={120} 
+                src={avatarPreview}
+                icon={!avatarPreview && <UserOutlined />}
+                className="border-2 border-blue-200"
               />
+              {isEditing && (
+                <Tooltip title="Thay đổi ảnh đại diện">
+                  <Upload
+                    accept=".jpg,.jpeg,.png"
+                    showUploadList={false}
+                    beforeUpload={(file) => {
+                      handleAvatarChange(file);
+                      return false;
+                    }}
+                    className="absolute bottom-0 right-0"
+                  >
+                    <Button 
+                      type="primary" 
+                      shape="circle"
+                      icon={<CameraOutlined />}
+                      size="large"
+                      className="bg-blue-500 hover:bg-blue-600"
+                    />
+                  </Upload>
+                </Tooltip>
+              )}
+            </div>
+            
+            {isEditing ? (
+              <Text type="secondary" className="text-center">
+                Nhấn vào biểu tượng camera để thay đổi ảnh đại diện
+              </Text>
+            ) : (
+              <Text strong className="text-lg">
+                {userInfo?.username}
+              </Text>
             )}
           </div>
-
-          {/* Username Input */}
-          <div>
-            <label
-              htmlFor="username"
-              className="block text-sm font-medium text-gray-800"
+          
+          {/* Form Section */}
+          <div className="flex-1">
+            <Form
+              layout="vertical"
+              onFinish={handleSubmit(onSubmit)}
+              className="profile-form"
             >
-              Họ và tên:
-            </label>
-            <input
-              id="username"
-              className="mt-2 p-3 bg-[#F9F5F2] block w-full border rounded-lg focus:border-[#9C7653] focus:ring-[#9C7653]"
-              disabled={!isEditing}
-              {...register("username", {
-                required: "Vui lòng nhập tên",
-                minLength: { value: 6, message: "Tên ít nhất 6 ký tự" },
-              })}
-            />
-            {errors.username && (
-              <p className="text-red-500">{errors.username.message}</p>
-            )}
+              <div className="mb-4">
+                <Form.Item 
+                  label={<Text strong>Họ và tên</Text>}
+                  validateStatus={errors.username ? "error" : ""}
+                  help={errors.username?.message}
+                >
+                  <Controller
+                    name="username"
+                    control={control}
+                    rules={{
+                      required: "Vui lòng nhập tên",
+                      minLength: { value: 6, message: "Tên ít nhất 6 ký tự" }
+                    }}
+                    render={({ field }) => (
+                      <Input
+                        {...field}
+                        prefix={<UserOutlined className="text-gray-400" />}
+                        disabled={!isEditing}
+                        className="py-2"
+                      />
+                    )}
+                  />
+                </Form.Item>
+                
+                <Form.Item 
+                  label={<Text strong>Email</Text>}
+                  validateStatus={errors.email ? "error" : ""}
+                  help={errors.email?.message}
+                >
+                  <Controller
+                    name="email"
+                    control={control}
+                    rules={{ required: "Vui lòng nhập email" }}
+                    render={({ field }) => (
+                      <Input
+                        {...field}
+                        prefix={<MailOutlined className="text-gray-400" />}
+                        disabled={!isEditing}
+                        className="py-2"
+                      />
+                    )}
+                  />
+                </Form.Item>
+                
+                <Form.Item 
+                  label={<Text strong>Số điện thoại</Text>}
+                  validateStatus={errors.phone_number ? "error" : ""}
+                  help={errors.phone_number?.message}
+                >
+                  <Controller
+                    name="phone_number"
+                    control={control}
+                    render={({ field }) => (
+                      <Input
+                        {...field}
+                        prefix={<PhoneOutlined className="text-gray-400" />}
+                        disabled={!isEditing}
+                        className="py-2"
+                      />
+                    )}
+                  />
+                </Form.Item>
+              </div>
+              
+              <Divider />
+              
+              <div className="flex justify-end gap-3">
+                {isEditing ? (
+                  <Space>
+                    <Button
+                      onClick={toggleEdit}
+                      icon={<CloseOutlined />}
+                      className="px-4"
+                    >
+                      Hủy
+                    </Button>
+                    <Button
+                      type="primary"
+                      htmlType="submit"
+                      icon={<SaveOutlined />}
+                      className="px-4"
+                    >
+                      Lưu thông tin
+                    </Button>
+                  </Space>
+                ) : (
+                  <Button
+                    type="primary"
+                    onClick={toggleEdit}
+                    icon={<EditOutlined />}
+                    className="px-4"
+                  >
+                    Chỉnh sửa thông tin
+                  </Button>
+                )}
+              </div>
+            </Form>
           </div>
-
-          {/* Email Input */}
-          <div>
-            <label
-              htmlFor="email"
-              className="block text-sm font-medium text-gray-800"
-            >
-              Email:
-            </label>
-            <input
-              type="email"
-              id="email"
-              className="mt-2 p-3 bg-[#F9F5F2] block w-full border rounded-lg focus:border-[#9C7653]"
-              disabled={!isEditing}
-              {...register("email", { required: "Vui lòng nhập email" })}
-            />
-            {errors.email && (
-              <p className="text-red-500">{errors.email.message}</p>
-            )}
-          </div>
-
-          {/* Phone Input */}
-          <div>
-            <label
-              htmlFor="phone_number"
-              className="block text-sm font-medium text-gray-800"
-            >
-              Số điện thoại:
-            </label>
-            <input
-              type="tel"
-              id="phone_number"
-              className="mt-2 p-3 bg-[#F9F5F2] block w-full border rounded-lg focus:border-[#9C7653]"
-              disabled={!isEditing}
-              {...register("phone_number")}
-            />
-          </div>
-
-          {/* Buttons */}
-          <div className="flex justify-between mt-8">
-            <button
-              type="button"
-              onClick={toggleEdit}
-              className="py-3 px-5 bg-[#9C7653] text-white rounded-lg"
-            >
-              {isEditing ? "Thoát" : "Chỉnh sửa thông tin"}
-            </button>
-            {isEditing && (
-              <button
-                type="submit"
-                className="py-3 px-5 bg-[#9C7653] text-white rounded-lg"
-              >
-                Lưu
-              </button>
-            )}
-          </div>
-        </form>
-      </div>
+        </div>
+      </Card>
+      
+      <style jsx global>{`
+        .profile-edit-container .ant-form-item-label > label {
+          font-weight: 500;
+        }
+        
+        .profile-edit-container .ant-input-affix-wrapper:hover,
+        .profile-edit-container .ant-input-affix-wrapper:focus {
+          border-color: #4096ff;
+          box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.1);
+        }
+        
+        .profile-edit-container .ant-input-affix-wrapper-focused {
+          border-color: #4096ff;
+          box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.1);
+        }
+        
+        @media (max-width: 768px) {
+          .profile-edit-container .ant-form {
+            margin-top: 2rem;
+          }
+        }
+      `}</style>
     </div>
   );
 }

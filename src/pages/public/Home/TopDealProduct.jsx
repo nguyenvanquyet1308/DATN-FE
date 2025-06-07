@@ -1,4 +1,17 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
+import { Carousel, Card, Typography, Button, Tag, Badge, Skeleton, Empty, Row, Col, Avatar } from "antd";
+import { RightOutlined, LeftOutlined, FireOutlined, ShoppingCartOutlined, StarFilled } from '@ant-design/icons';
+import "slick-carousel/slick/slick.css";
+import "slick-carousel/slick/slick-theme.css";
+import { getProducts } from "apis/product.api";
+import { getProductBrands } from "apis/productBrand.api";
+import QueryString from "qs";
+import { useDispatch, useSelector } from "react-redux";
+import { generatePath, useNavigate } from "react-router-dom";
+import { setFilterParams } from "store/slicers/common.slicer";
+import paths from "constant/paths";
+
+// Banner images
 import img1 from "assets/images/bn2.jpg";
 import img2 from "assets/images/10.jpg";
 import img3 from "assets/images/13.jpg";
@@ -8,49 +21,47 @@ import img6 from "assets/images/bn1.jpg";
 import img7 from "assets/images/sale1.jpg";
 import img8 from "assets/images/sale2.jpg";
 import img9 from "assets/images/sale3.jpg";
-import "slick-carousel/slick/slick.css";
-import "slick-carousel/slick/slick-theme.css";
-import Slider from "react-slick";
-import { getProducts } from "apis/product.api";
-import { getProductBrands } from "apis/productBrand.api";
-import { name } from "@cloudinary/url-gen/actions/namedTransformation";
-import Product from "../Products/Product";
-import QueryString from "qs";
-import { useDispatch, useSelector } from "react-redux";
-import { generatePath, useNavigate } from "react-router-dom";
-import { setFilterParams } from "store/slicers/common.slicer";
-import paths from "constant/paths";
+
+const { Title, Text, Paragraph } = Typography;
+const { Meta } = Card;
 
 const TopDealProduct = () => {
-  const [blogs, setBlogs] = useState([]);
+  const [products, setProducts] = useState([]);
+  const [brands, setBrands] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [limit, setLimit] = useState(10);
   const [page, setPage] = useState(1);
-  const [brands, setBrands] = useState([]);
-  const [products, setProducts] = useState([]);
+  const carouselRef = useRef();
+  const productListRef = useRef();
+  
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { filterParams } = useSelector((state) => state.common);
 
   const fetchProduct = async () => {
-    const params = {
-      limit,
-      page,
-    };
+    setLoading(true);
     try {
+      const params = {
+        limit,
+        page,
+      };
       const res = await getProducts(params);
-      setProducts(res?.result?.content);
+      setProducts(res?.result?.content || []);
     } catch (error) {
       console.log(error.message);
+    } finally {
+      setLoading(false);
     }
   };
+
   const fetchBrand = async () => {
-    const params = {
-      limit,
-      page,
-    };
     try {
+      const params = {
+        limit,
+        page,
+      };
       const res = await getProductBrands(params);
-      setBrands(res?.result?.content);
+      setBrands(res?.result?.content || []);
     } catch (error) {
       console.log(error.message);
     }
@@ -61,287 +72,328 @@ const TopDealProduct = () => {
     fetchBrand();
   }, []);
 
-  const contentStyle = {
-    margin: 0,
-    height: "160px",
-    color: "#fff",
-    lineHeight: "160px",
-    textAlign: "center",
-    background: "#364d79",
+  const handleBrandClick = (brand) => {
+    dispatch(
+      setFilterParams({
+        ...filterParams,
+        brand: brand.name,
+      })
+    );
+    navigate({
+      pathname: paths.PRODUCTS,
+      search: QueryString.stringify({
+        ...filterParams,
+        category: brand.name,
+      }),
+    });
   };
-  const settings = {
-    dots: true,
-    infinite: true,
-    speed: 500,
-    slidesToShow: 4,
-    slidesToScroll: 2,
+
+  const navigateToProduct = (product) => {
+    navigate(
+      generatePath(paths.DETAIL_PRODUCT, {
+        id: product?.id,
+      }),
+      { state: { productData: product } }
+    );
   };
-  var setting = {
-    dots: true,
-    infinite: true,
-    speed: 500,
-    slidesToShow: 1,
-    slidesToScroll: 1,
+
+  const scrollProductList = (direction) => {
+    if (productListRef.current) {
+      const scrollAmount = direction === 'left' ? -350 : 350;
+      productListRef.current.scrollBy({
+        left: scrollAmount,
+        behavior: 'smooth'
+      });
+    }
   };
-  const sliderSettings = {
-    dots: true,
-    infinite: true,
-    speed: 500,
-    slidesToShow: 1,
-    slidesToScroll: 1,
-  };
+
   return (
-    <div>
-      <div className="relative">
-        <Slider {...sliderSettings}>
+    <div className="mb-10">
+      {/* Hero Carousel */}
+      <div className="relative mb-8">
+        <Carousel
+          autoplay
+          effect="fade"
+          ref={carouselRef}
+          className="rounded-xl overflow-hidden shadow-lg"
+          dots={{ className: "custom-dots" }}
+        >
           {[img6, img1, img5, img4].map((image, index) => (
-            <div key={index} className="relative overflow-hidden">
-              {/* Hình ảnh với hiệu ứng zoom nhẹ và tỷ lệ khung hình cố định */}
-              <img
-                src={image}
-                className="w-full h-auto max-h-[650px] object-cover transform transition-transform duration-700 ease-out hover:scale-110 sm:scale-105 md:scale-110"
-                alt=""
-              />
-
-              {/* Lớp phủ gradient động */}
-              <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-transparent" />
-
-              {/* Nội dung banner với hiệu ứng xuất hiện dần */}
-              <div className="absolute inset-0 flex flex-col justify-center items-start px-4 md:px-10 text-white space-y-4 transition-opacity duration-1000 ease-in-out opacity-0 hover:opacity-100">
-                <h2 className="text-xl sm:text-2xl md:text-3xl font-bold transition-transform duration-700 ease-in-out transform translate-y-8 hover:translate-y-0">
-                  Khuyến mãi đặc biệt
-                </h2>
-                <p className="text-sm sm:text-base md:text-lg max-w-md transition-transform duration-700 ease-in-out transform translate-y-8 delay-100 hover:translate-y-0">
-                  Cơ hội sở hữu sản phẩm với giá ưu đãi và nhiều phần quà hấp
-                  dẫn.
-                </p>
-                <button className="px-6 py-2 bg-red-500 text-white rounded-full font-medium hover:bg-red-600 transition duration-700 ease-in-out transform translate-y-8 delay-200 hover:translate-y-0">
-                  Khám phá ngay
-                </button>
+            <div key={index}>
+              <div className="relative h-[300px] md:h-[400px] lg:h-[500px] w-full">
+                <img
+                  src={image}
+                  alt={`Banner ${index + 1}`}
+                  className="w-full h-full object-cover"
+                />
+                <div className="absolute inset-0 bg-gradient-to-r from-black/60 to-transparent flex flex-col justify-center p-8 md:p-16">
+                  <div className="max-w-lg">
+                    <Badge.Ribbon text="Hot Deal" color="red">
+                      <Title level={2} className="text-white mb-4 transition-all duration-500">
+                        Khuyến mãi đặc biệt
+                      </Title>
+                    </Badge.Ribbon>
+                    <Paragraph className="text-white text-base md:text-lg mb-6 transition-all duration-500 delay-100">
+                      Cơ hội sở hữu sản phẩm với giá ưu đãi và nhiều phần quà hấp dẫn.
+                    </Paragraph>
+                    <Button
+                      type="primary"
+                      size="large"
+                      className="bg-red-500 hover:bg-red-600 border-0 rounded-full"
+                      onClick={() => navigate(paths.PRODUCTS)}
+                    >
+                      Khám phá ngay
+                    </Button>
+                  </div>
+                </div>
               </div>
             </div>
           ))}
-        </Slider>
+        </Carousel>
+
+        {/* Navigation Buttons */}
+        <Button 
+          type="primary"
+          shape="circle"
+          icon={<LeftOutlined />}
+          className="absolute left-4 top-1/2 transform -translate-y-1/2 z-10 bg-white/70 text-gray-800 hover:bg-white border-0 shadow-lg"
+          onClick={() => carouselRef.current.prev()}
+        />
+        <Button 
+          type="primary"
+          shape="circle"
+          icon={<RightOutlined />}
+          className="absolute right-4 top-1/2 transform -translate-y-1/2 z-10 bg-white/70 text-gray-800 hover:bg-white border-0 shadow-lg"
+          onClick={() => carouselRef.current.next()}
+        />
       </div>
 
-      {/* Categories */}
-      <div className="bg-white shadow-2xl rounded-lg p-6">
-        <div className="flex flex-col md:flex-row gap-8">
-          {/* Phần Banner Bên Trái */}
-          <div className="flex-none w-full md:w-1/2 bg-gradient-to-r from-orange-400 to-gray-300  p-6 rounded-lg relative overflow-hidden shadow-xl">
-            {/* Thêm hiệu ứng nền gradient nhẹ */}
-            <div className="absolute top-0 left-0 right-0 bottom-0 bg-gradient-to-r from-indigo-600 to-transparent opacity-15 z-0"></div>
-
-            {/* Nội dung bên trong */}
-            <div className="relative z-10 text-white">
-              <div className="text-red-600 font-bold text-xl mb-2">
-                Bùng Nổ Sale Giữa Tháng - Mua Ngay, Đừng Bỏ Lỡ!
-              </div>
-              <div className="text-white font-semibold text-base mb-4">
-                Còn 2 Ngày
-              </div>
-
-              <h2 className="text-3xl font-extrabold text-white mb-4 transition duration-300 transform text-white-400">
-                Siêu Ưu Đãi Giảm Giá Đến 70% - Nâng Tầm Phong Cách!
-              </h2>
-              <div className="text-white font-semibold text-lg mb-4">
-                Đặc biệt: Giảm 50% toàn bộ sản phẩm từ ngày 7/7 đến 21/7. Không
-                thể bỏ qua!
-              </div>
-
-              <div className="grid grid-cols-3 gap-4 mt-4">
-                <img
-                  src={img7}
-                  alt="Product 1"
-                  className="w-full rounded-lg shadow-xl transition-transform duration-300 transform hover:scale-105 hover:shadow-2xl"
-                />
-                <img
-                  src={img8}
-                  alt="Product 2"
-                  className="w-full rounded-lg shadow-xl transition-transform duration-300 transform hover:scale-105 hover:shadow-2xl"
-                />
-                <img
-                  src={img9}
-                  alt="Product 3"
-                  className="w-full rounded-lg shadow-xl transition-transform duration-300 transform hover:scale-105 hover:shadow-2xl"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Phần Danh Mục Bên Phải */}
-          <div className="flex w-full md:w-1/2 overflow-x-auto">
-            {/* Lưới hai hàng cho các danh mục */}
-            <div className="grid grid-rows-3 gap-6 grid-flow-col w-max px-2">
-              {brands.map((brand, index) => (
-                <div
-                  key={index}
-                  className="flex flex-col items-center text-center w-32 h-40 cursor-pointer hover:bg-gray-50 p-4 rounded-lg transition duration-300 transform hover:scale-105 hover:shadow-xl"
-                  onClick={() => {
-                    dispatch(
-                      setFilterParams({
-                        ...filterParams,
-                        brand: brand.name,
-                      }),
-                    );
-                    navigate({
-                      pathname: paths.PRODUCTS,
-                      search: QueryString.stringify({
-                        ...filterParams,
-                        category: brand.name,
-                      }),
-                    });
-                  }}
-                >
-                  {/* Hình ảnh và hiệu ứng hover */}
-                  <div className="w-20 h-20 mb-2 flex items-center justify-center overflow-hidden rounded-full border-4 border-indigo-600 shadow-lg transform transition-all duration-300 hover:scale-110 hover:rotate-12">
-                    <img
-                      src={brand.image}
-                      className="object-cover w-full h-full transition duration-300 transform hover:scale-110"
-                    />
-                  </div>
-                  {/* Tiêu đề danh mục */}
-                  <span className="text-sm font-semibold text-gray-800 transition duration-200 transform hover:text-indigo-600">
-                    {brand.name}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Products */}
-      <div className="bg-white p-4 rounded-lg shadow-lg mt-2 transition-all hover:shadow-xl relative">
-        <div className="flex items-center justify-between mb-5">
-          <h2 className="text-xl font-extrabold text-red-500 flex items-center space-x-2">
-            <span>🔥</span>
-            <span>TOP DEAL • SIÊU RẺ</span>
-          </h2>
-          <a
-            href="#"
-            className="text-blue-600 text-sm font-semibold hover:underline"
-          >
-            Xem tất cả
-          </a>
-        </div>
-
-        {/* Nút mũi tên trái */}
-        <button
-          onClick={() => {
-            document.getElementById("productList").scrollLeft -= 400;
-          }}
-          className="hidden md:flex absolute left-2 top-1/2 transform -translate-y-1/2 bg-gray-400/70 text-white rounded-full p-3 shadow-md hover:bg-violet-300 hover:scale-110 transition-all focus:outline-none z-10"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            fill="currentColor"
-            viewBox="0 0 20 20"
-            className="w-5 h-5"
-          >
-            <path
-              fillRule="evenodd"
-              d="M12.707 15.707a1 1 0 01-1.414 0l-5-5a1 1 0 010-1.414l5-5a1 1 0 011.414 1.414L8.414 10l4.293 4.293a1 1 0 010 1.414z "
-              clipRule="evenodd"
-            />
-          </svg>
-        </button>
-
-        {/* Danh sách sản phẩm */}
-        <div
-          id="productList"
-          className="flex space-x-4 overflow-x-auto scrollbar-hide px-4 py-4"
-          style={{ scrollbarWidth: "none", msOverflowStyle: "none" }} // Ẩn thanh cuộn trên Firefox và IE
-        >
-          {products
-            .filter((product) => product.stars === 5) // Lọc sản phẩm có số sao là 5
-            .map((product, index) => (
-              <div
-                key={index}
-                className="border rounded-lg overflow-hidden bg-white shadow-lg transition-all transform hover:shadow-xl hover:-translate-y-2 flex flex-col items-center p-2 min-w-[200px]"
-              >
-                <div
-                  className="relative w-full h-64"
-                  onClick={() =>
-                    navigate(
-                      generatePath(paths.DETAIL_PRODUCT, {
-                        id: product?.id,
-                      }),
-                      { state: { productData: product } },
-                    )
-                  }
-                >
-                  {product?.skus?.length > 0 && (
-                    <img
-                      src={product.skus[0]?.images.split(",")[0]}
-                      alt="Product Image"
-                      className="w-full h-full object-cover"
-                    />
-                  )}
-                  <div className="absolute top-2 right-2 flex flex-col space-y-1">
-                    <span className="bg-blue-400 text-white text-[0.6rem] font-bold px-2 py-1 rounded-full text-center">
-                      Chính hãng
-                    </span>
-                  </div>
-                </div>
-                <div className="text-center p-3 flex flex-col items-center">
-                  <h3 className="text-xs font-semibold mb-1 line-clamp-2 text-center">
-                    {product.name}
-                  </h3>
-                  <div className="flex items-center text-yellow-500 mb-1">
-                    {Array.from({ length: 5 }).map((_, i) => (
-                      <span
-                        key={i}
-                        className={
-                          i < product.stars
-                            ? "text-yellow-500"
-                            : "text-gray-300"
-                        }
-                      >
-                        ★
-                      </span>
+      {/* Brands and Promo Section */}
+      <div className="mb-8">
+        <Card className="shadow-md hover:shadow-xl transition-shadow duration-300">
+          <Row gutter={[24, 24]} className="items-center">
+            {/* Sale Banner */}
+            <Col xs={24} md={12} className="mb-6 md:mb-0">
+              <div className="bg-gradient-to-r from-blue-600 to-violet-600 rounded-xl p-6 text-white relative overflow-hidden h-full">
+                <div className="absolute top-0 right-0 w-[300px] h-[300px] bg-white/10 rounded-full -mr-32 -mt-32"></div>
+                <div className="absolute bottom-0 left-0 w-[200px] h-[200px] bg-white/5 rounded-full -ml-24 -mb-24"></div>
+                
+                <div className="relative z-10">
+                  <Tag color="red" className="mb-4 text-sm">Còn 2 Ngày</Tag>
+                  <Title level={3} className="text-white mb-4">
+                    Siêu Ưu Đãi Giảm Giá Đến <span className="text-yellow-300">70%</span>
+                  </Title>
+                  <Paragraph className="text-white/90 mb-6">
+                    Đặc biệt: Giảm 50% toàn bộ sản phẩm từ ngày 7/7 đến 21/7. Không thể bỏ qua!
+                  </Paragraph>
+                  
+                  <Row gutter={[12, 12]} className="mt-4">
+                    {[img7, img8, img9].map((img, i) => (
+                      <Col span={8} key={i}>
+                        <div className="overflow-hidden rounded-lg shadow-lg">
+                          <img
+                            src={img}
+                            alt={`Promotion ${i+1}`}
+                            className="w-full h-28 object-cover transition-transform duration-500 hover:scale-110"
+                          />
+                        </div>
+                      </Col>
                     ))}
-                  </div>
-                  <div className="text-gray-500 text-xs font-bold">
-                    {product.skus[0]?.discount && product.skus[0]?.price
-                      ? `${(
-                          (product.skus[0].price *
-                            (100 - product.skus[0].discount)) /
-                          100
-                        ).toLocaleString()}đ`
-                      : "Liên hệ"}
-                  </div>
-                  <div className="text-red-500 text-base line-through">
-                    {product?.skus[0]?.price
-                      ? `${product.skus[0].price.toLocaleString()}đ`
-                      : "Liên hệ"}
+                  </Row>
+                </div>
+              </div>
+            </Col>
+
+            {/* Brands Scroll */}
+            <Col xs={24} md={12}>
+              <Title level={5} className="mb-4 flex items-center">
+                <img src={img6} className="w-6 h-6 rounded-full object-cover mr-2" />
+                Thương hiệu nổi bật
+              </Title>
+              
+              <div className="relative">
+                <div className="flex overflow-x-auto pb-4 hide-scrollbar">
+                  <div className="flex space-x-4">
+                    {loading ? (
+                      Array(6).fill(0).map((_, i) => (
+                        <div key={i} className="flex-shrink-0 w-28">
+                          <Skeleton.Avatar active size={64} shape="circle" className="mb-2 mx-auto" />
+                          <Skeleton.Input active size="small" className="w-full" />
+                        </div>
+                      ))
+                    ) : brands.length === 0 ? (
+                      <Empty description="Không có thương hiệu nào" />
+                    ) : (
+                      brands.map((brand, index) => (
+                        <div
+                          key={index}
+                          className="flex-shrink-0 text-center w-28 p-2 cursor-pointer transition-all duration-300 transform hover:scale-105"
+                          onClick={() => handleBrandClick(brand)}
+                        >
+                          <div className="w-16 h-16 mx-auto mb-2 rounded-full border-2 border-blue-500 p-1 bg-white shadow-md">
+                            <Avatar
+                              src={brand.image}
+                              className="w-full h-full object-cover"
+                              size={56}
+                            />
+                          </div>
+                          <Text strong className="block text-sm truncate">
+                            {brand.name}
+                          </Text>
+                        </div>
+                      ))
+                    )}
                   </div>
                 </div>
               </div>
-            ))}
-        </div>
-
-        {/* Nút mũi tên phải */}
-        <button
-          onClick={() => {
-            document.getElementById("productList").scrollLeft += 400;
-          }}
-          className="hidden md:flex absolute right-2 top-1/2 transform -translate-y-1/2 bg-gray-400/70 text-white rounded-full p-3 shadow-md hover:bg-violet-300 hover:scale-110 transition-all focus:outline-none z-10"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            fill="currentColor"
-            viewBox="0 0 20 20"
-            className="w-5 h-5"
-          >
-            <path
-              fillRule="evenodd"
-              d="M7.293 4.293a1 1 0 011.414 0l5 5a1 1 0 010 1.414l-5 5a1 1 0 01-1.414-1.414L11.586 10 7.293 5.707a1 1 0 010-1.414z"
-              clipRule="evenodd"
-            />
-          </svg>
-        </button>
+            </Col>
+          </Row>
+        </Card>
       </div>
+
+      {/* Top Deal Products */}
+      <Card
+        className="shadow-md hover:shadow-xl transition-shadow duration-300"
+        title={
+          <div className="flex justify-between items-center">
+            <Title level={4} className="m-0 flex items-center">
+              <FireOutlined className="mr-2 text-red-500" />
+              Top Deal • Siêu Rẻ
+            </Title>
+            <Button
+              type="link"
+              className="text-blue-500 hover:text-blue-700"
+              onClick={() => navigate(paths.PRODUCTS)}
+            >
+              Xem tất cả
+            </Button>
+          </div>
+        }
+      >
+        <div className="relative">
+          <div 
+            className="flex space-x-4 overflow-x-auto py-4 hide-scrollbar scroll-smooth"
+            ref={productListRef}
+          >
+            {loading ? (
+              Array(5).fill(0).map((_, i) => (
+                <div key={i} className="flex-shrink-0 w-48 md:w-56">
+                  <Card className="w-full h-full">
+                    <Skeleton.Image active className="w-full h-40 mb-4" />
+                    <Skeleton active paragraph={{ rows: 1 }} />
+                  </Card>
+                </div>
+              ))
+            ) : products.length === 0 ? (
+              <Empty description="Không có sản phẩm nào" />
+            ) : (
+              products
+                .filter(product => product.stars === 5)
+                .map((product, index) => (
+                  <Card
+                    key={index}
+                    hoverable
+                    className="flex-shrink-0 w-48 md:w-56 transition-all duration-300 hover:-translate-y-2"
+                    cover={
+                      <div className="h-48 overflow-hidden relative">
+                        {product?.skus[0]?.images && (
+                          <img
+                            src={product.skus[0].images.split(",")[0]}
+                            alt={product.name}
+                            className="w-full h-full object-cover transition-transform duration-700 hover:scale-110"
+                          />
+                        )}
+                        <Badge.Ribbon
+                          text="Chính hãng"
+                          color="blue"
+                          className="opacity-80"
+                        />
+                        {product.skus[0]?.discount > 0 && (
+                          <div className="absolute top-2 left-2 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full">
+                            -{product.skus[0].discount}%
+                          </div>
+                        )}
+                      </div>
+                    }
+                    onClick={() => navigateToProduct(product)}
+                  >
+                    <Meta
+                      title={
+                        <Text strong className="line-clamp-2 min-h-[3em]">
+                          {product.name}
+                        </Text>
+                      }
+                      description={
+                        <div className="mt-2">
+                          <div className="flex items-center text-yellow-500 mb-2">
+                            {[1, 2, 3, 4, 5].map((star) => (
+                              <StarFilled
+                                key={star}
+                                className={star <= product.stars ? "text-yellow-500" : "text-gray-300"}
+                              />
+                            ))}
+                          </div>
+                          {product.skus[0]?.discount && product.skus[0]?.price ? (
+                            <div className="flex flex-col">
+                              <Text className="text-lg font-bold text-red-500">
+                                {((product.skus[0].price * (100 - product.skus[0].discount)) / 100).toLocaleString()}đ
+                              </Text>
+                              <Text delete type="secondary" className="text-sm">
+                                {product.skus[0].price.toLocaleString()}đ
+                              </Text>
+                            </div>
+                          ) : (
+                            <Text className="text-lg font-bold text-red-500">
+                              {product.skus[0]?.price ? `${product.skus[0].price.toLocaleString()}đ` : "Liên hệ"}
+                            </Text>
+                          )}
+                        </div>
+                      }
+                    />
+                  </Card>
+                ))
+            )}
+          </div>
+
+          {/* Scroll Buttons */}
+          <Button
+            type="primary"
+            shape="circle"
+            icon={<LeftOutlined />}
+            className="absolute left-0 top-1/2 transform -translate-y-1/2 z-10 bg-gray-200/80 text-gray-800 hover:bg-gray-300 border-0 shadow-lg"
+            onClick={() => scrollProductList('left')}
+          />
+          <Button
+            type="primary" 
+            shape="circle"
+            icon={<RightOutlined />}
+            className="absolute right-0 top-1/2 transform -translate-y-1/2 z-10 bg-gray-200/80 text-gray-800 hover:bg-gray-300 border-0 shadow-lg"
+            onClick={() => scrollProductList('right')}
+          />
+        </div>
+      </Card>
+
+      <style jsx global>{`
+        .custom-dots li button {
+          background: rgba(255, 255, 255, 0.5) !important;
+          height: 8px !important;
+          width: 8px !important;
+          border-radius: 50% !important;
+        }
+        
+        .custom-dots li.slick-active button {
+          background: white !important;
+        }
+        
+        .hide-scrollbar::-webkit-scrollbar {
+          display: none;
+        }
+        
+        .hide-scrollbar {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
+        }
+      `}</style>
     </div>
   );
 };

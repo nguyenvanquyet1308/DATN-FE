@@ -1,5 +1,19 @@
-import { faker } from "@faker-js/faker";
-import { notification } from "antd";
+import React, { useEffect, useState } from "react";
+import { 
+  Card, 
+  notification, 
+  Typography, 
+  Select, 
+  Space, 
+  Avatar, 
+  Divider, 
+  Row, 
+  Col, 
+  Statistic,
+  List,
+  Tag,
+  Spin
+} from "antd";
 import { getRoles } from "apis/role.api";
 import {
   getStatisticUserByRole,
@@ -8,7 +22,6 @@ import {
   getTopReactUsers,
   getUserStatisticDaily,
 } from "apis/user.api";
-import { useEffect, useState } from "react";
 import { formatMoney } from "utils/helper";
 import Icons from "utils/icons";
 import {
@@ -21,56 +34,77 @@ import {
   CartesianGrid,
   Tooltip,
 } from "recharts";
+import { faker } from "@faker-js/faker";
+
+const { Title, Text } = Typography;
+const { Option } = Select;
 
 function UserStatistic() {
-  const [userRoles, setUserRoles] = useState([]);
-  const [userStatus, setUserStatus] = useState([]);
+  const [userRoles, setUserRoles] = useState({});
+  const [userStatus, setUserStatus] = useState({});
   const [userTopReaction, setUserTopReaction] = useState([]);
   const [userTopPayment, setUserTopPayment] = useState([]);
-  const [dataChar, setDataChar] = useState([]);
+  const [dataChart, setDataChart] = useState([]);
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const [loading, setLoading] = useState({
+    roles: false,
+    status: false,
+    reaction: false,
+    payment: false,
+    chart: false
+  });
 
   const fetchUserRoleStatistic = async () => {
+    setLoading(prev => ({ ...prev, roles: true }));
     try {
       const res = await getStatisticUserByRole();
-      setUserRoles(res);
+      setUserRoles(res || {});
     } catch (error) {
-      notification.warning({
-        message: error.message,
-        duration: 2,
-        placement: "top",
+      notification.error({
+        message: "Lỗi khi tải thống kê vai trò",
+        description: error.message || "Đã xảy ra lỗi, vui lòng thử lại sau",
+        duration: 3,
       });
+    } finally {
+      setLoading(prev => ({ ...prev, roles: false }));
     }
   };
 
   const fetchUserStatusStatistic = async () => {
+    setLoading(prev => ({ ...prev, status: true }));
     try {
       const res = await getStatisticUserByStatus();
-      setUserStatus(res);
+      setUserStatus(res || {});
     } catch (error) {
-      notification.warning({
-        message: error.message,
-        duration: 2,
-        placement: "top",
+      notification.error({
+        message: "Lỗi khi tải thống kê trạng thái",
+        description: error.message || "Đã xảy ra lỗi, vui lòng thử lại sau",
+        duration: 3,
       });
+    } finally {
+      setLoading(prev => ({ ...prev, status: false }));
     }
   };
 
   const fetchUserReactionStatistic = async () => {
+    setLoading(prev => ({ ...prev, reaction: true }));
     try {
       const res = await getTopReactUsers();
-      setUserTopReaction(res);
+      setUserTopReaction(res || []);
     } catch (error) {
-      notification.warning({
-        message: error.message,
-        duration: 2,
-        placement: "top",
+      notification.error({
+        message: "Lỗi khi tải thống kê tương tác",
+        description: error.message || "Đã xảy ra lỗi, vui lòng thử lại sau",
+        duration: 3,
       });
+    } finally {
+      setLoading(prev => ({ ...prev, reaction: false }));
     }
   };
 
   const fetchUserStatisticDaily = async () => {
+    setLoading(prev => ({ ...prev, chart: true }));
     try {
       const dataChar = await getUserStatisticDaily({
         month: selectedMonth,
@@ -82,26 +116,31 @@ function UserStatistic() {
         users: value,
       }));
 
-      setDataChar(chartData);
+      setDataChart(chartData);
     } catch (error) {
-      notification.warning({
-        message: error.message,
-        duration: 2,
-        placement: "top",
+      notification.error({
+        message: "Lỗi khi tải thống kê đăng ký",
+        description: error.message || "Đã xảy ra lỗi, vui lòng thử lại sau",
+        duration: 3,
       });
+    } finally {
+      setLoading(prev => ({ ...prev, chart: false }));
     }
   };
 
   const fetchUserPaymentStatistic = async () => {
+    setLoading(prev => ({ ...prev, payment: true }));
     try {
       const res = await getStatisticUserTopPayment();
-      setUserTopPayment(res);
+      setUserTopPayment(res || []);
     } catch (error) {
-      notification.warning({
-        message: error.message,
-        duration: 2,
-        placement: "top",
+      notification.error({
+        message: "Lỗi khi tải thống kê thanh toán",
+        description: error.message || "Đã xảy ra lỗi, vui lòng thử lại sau",
+        duration: 3,
       });
+    } finally {
+      setLoading(prev => ({ ...prev, payment: false }));
     }
   };
 
@@ -120,226 +159,214 @@ function UserStatistic() {
   const convertRoleUserUI = (role) => {
     if (!role) return {};
 
-    if (role == "USER")
+    if (role === "USER")
       return {
         text: "Khách hàng",
         icon: <Icons.FaUserTag />,
+        color: "blue"
       };
-    if (role == "SUPERADMIN")
+    if (role === "SUPERADMIN")
       return {
         text: "Super admin",
         icon: <Icons.FaUserShield />,
+        color: "red"
       };
 
     if (role.toUpperCase().includes("STAFF"))
       return {
         text: "Nhân viên",
         icon: <Icons.FaUserTie />,
+        color: "purple"
       };
 
     return {
       text: "Nhân viên",
       icon: <Icons.FaUserCog />,
+      color: "orange"
     };
   };
 
   const convertStatusUserUI = (status) => {
     if (!status) return {};
 
-    if (status == "INACTIVE")
+    if (status === "INACTIVE")
       return {
         text: "Chưa kích hoạt",
-        icon: <Icons.TbLockOff color="gray" />,
-        textColor: "text-gray-400",
+        icon: <Icons.TbLockOff />,
+        color: "default"
       };
 
-    if (status == "BLOCKED")
+    if (status === "BLOCKED")
       return {
         text: "Đã bị khóa",
-        icon: <Icons.TbLockOpenOff color="red" />,
-        textColor: "text-red-500",
+        icon: <Icons.TbLockOpenOff />,
+        color: "error"
       };
 
     return {
       text: "Kích hoạt",
-      icon: <Icons.FaCheck color="green" />,
-      textColor: "text-green-600",
+      icon: <Icons.FaCheck />,
+      color: "success"
     };
   };
 
+  const totalUsers = Object.values(userRoles).reduce((sum, curr) => sum + curr, 0);
+
   return (
-    <div className="flex justify-center flex-col gap-4">
-      <h1 className="mx-auto text-primary my-4 flex text-3xl font-bold">
+    <Card style={{ margin: '16px' }}>
+      <Title level={2} style={{ textAlign: 'center', color: '#1890ff' }}>
         Thống kê người dùng
-      </h1>
-      <div className="flex justify-around">
-        <div className="border rounded bg-white  flex flex-col justify-center py-2 px-4">
-          <h1 className=" font-bold border-b border-primary py-2 text-primary px-12">
-            Người dùng hiện tại
-          </h1>
-          <div className="flex flex-col gap-2 px-2">
-            {Object.entries(userRoles)?.map(([role, userNumber]) => (
-              <div className="flex gap-4 justify-between text-lg">
-                <div className="flex gap-2 items-center text-blue-600">
-                  <p>{convertRoleUserUI(role)?.icon}</p>
-                  <p>{convertRoleUserUI(role)?.text}</p>
-                </div>
-                <p>{userNumber} tài khoản</p>
-              </div>
-            ))}
-            <div className="flex gap-4 justify-between text-lg">
-              <div className="flex gap-2 items-center text-blue-600">
-                <p>{<Icons.MdOutlineClearAll />}</p>
-                <p>Tổng số</p>
-              </div>
-              <p>
-                {Object.values(userRoles).reduce(
-                  (sum, curr) => (sum += curr),
-                  0,
-                )}{" "}
-                người
-              </p>
-            </div>
-          </div>
-        </div>
-        <div className="border rounded bg-white  flex flex-col  py-2 px-4">
-          <h1 className=" font-bold border-b border-primary py-2 text-primary px-12">
-            Trạng thái người dùng
-          </h1>
-          <div className="flex flex-col gap-2 px-2">
-            {Object.entries(userStatus)?.map(([status, userNumber]) => (
-              <div className="flex gap-4 justify-between text-lg">
-                <div className="flex gap-2 items-center text-primary">
-                  <p>{convertStatusUserUI(status)?.icon}</p>
-                  <p className={convertStatusUserUI(status)?.textColor}>
-                    {convertStatusUserUI(status)?.text}
-                  </p>
-                </div>
-                <p>{userNumber} tài khoản</p>
-              </div>
-            ))}
-          </div>
-        </div>
-        <div className="border rounded bg-white  flex flex-col  py-2 px-4">
-          <h1 className=" font-bold border-b border-primary py-2 text-primary px-12 text-center">
-            Top tương tác
-          </h1>
-          <div className="flex flex-col gap-2 px-2 mt-2 max-h-[20vh] overflow-y-auto">
-            {userTopReaction.map((user, index) => (
-              <div className="flex gap-4 items-center">
-                <div className="px-4 py-1 bg-blue-600 text-white text-sm rounded font-semibold italic">
-                  Top {index + 1}
-                </div>
-                <div className="flex items-center gap-2">
-                  <img
-                    src={user.avatar || faker.image.avatar()}
-                    alt=""
-                    className="w-8 h-8 object-cover rounded-full"
-                  />
-                  <div className="text-lg">
-                    {user.username || user.email.split("@")[0]}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-        <div className="border rounded bg-white  flex flex-col  py-2 px-4">
-          <h1 className=" font-bold border-b border-primary py-2 text-primary px-12 text-center">
-            Top khách hàng tiềm năng
-          </h1>
-          <div className="flex flex-col gap-2 px-2 mt-2 max-h-[20vh] overflow-y-auto">
-            {userTopPayment.map((user, index) => (
-              <div className="flex gap-4 items-center">
-                <div className="px-4 py-1 bg-blue-600 text-white text-sm rounded font-semibold italic">
-                  Top {index + 1}
-                </div>
-                <div className="flex items-center gap-2 ">
-                  <div className="flex items-center">
-                    <img
-                      src={user.avatar || faker.image.avatar()}
-                      alt=""
-                      className="w-8 h-8 object-cover rounded-full"
-                    />
-                    <div className="text-lg">
-                      {user.username || user.email.split("@")[0]}
-                    </div>
-                  </div>
-                  <div className="pl-2 border-l flex gap-2 items-center">
-                    <div>{formatMoney(user?.totalPaymentAmount)}đ</div>
-                    <div className="pl-2 border-l">{user?.totalOrder} đơn</div>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
+      </Title>
 
-      <div className="h-[60vh] bg-white rounded px-4 py-2 mx-2 mt-auto border border-primary">
-        <div>
-          {dataChar && (
-            <div className="text-primary font-bold">
-              Tổng người dùng đăng kí tháng {selectedMonth} năm {selectedYear}{" "}
-              là :{" "}
-              {dataChar?.reduce((sum, prev) => (sum += prev.users), 0)}{" "}
-            </div>
-          )}
+      <Row gutter={[16, 16]}>
+        <Col span={6}>
+          <Card title="Người dùng hiện tại" loading={loading.roles}>
+            <List
+              dataSource={Object.entries(userRoles)}
+              renderItem={([role, userNumber]) => {
+                const roleInfo = convertRoleUserUI(role);
+                return (
+                  <List.Item>
+                    <Space>
+                      {roleInfo.icon}
+                      <Tag color={roleInfo.color}>{roleInfo.text}</Tag>
+                    </Space>
+                    <Text strong>{userNumber} tài khoản</Text>
+                  </List.Item>
+                );
+              }}
+              footer={
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Space>
+                    <Icons.MdOutlineClearAll />
+                    <Text strong>Tổng số</Text>
+                  </Space>
+                  <Text strong>{totalUsers} người</Text>
+                </div>
+              }
+            />
+          </Card>
+        </Col>
 
-          <div className="flex justify-end my-4 gap-4">
-            <select
-              className="border rounded px-2 py-1"
+        <Col span={6}>
+          <Card title="Trạng thái người dùng" loading={loading.status}>
+            <List
+              dataSource={Object.entries(userStatus)}
+              renderItem={([status, userNumber]) => {
+                const statusInfo = convertStatusUserUI(status);
+                return (
+                  <List.Item>
+                    <Space>
+                      {statusInfo.icon}
+                      <Tag color={statusInfo.color}>{statusInfo.text}</Tag>
+                    </Space>
+                    <Text strong>{userNumber} tài khoản</Text>
+                  </List.Item>
+                );
+              }}
+            />
+          </Card>
+        </Col>
+
+        <Col span={6}>
+          <Card title="Top tương tác" loading={loading.reaction}>
+            <List
+              dataSource={userTopReaction}
+              renderItem={(user, index) => (
+                <List.Item>
+                  <Space>
+                    <Tag color="blue">Top {index + 1}</Tag>
+                    <Avatar src={user.avatar || faker.image.avatar()} />
+                    <Text>{user.username || user.email?.split("@")[0]}</Text>
+                  </Space>
+                </List.Item>
+              )}
+            />
+          </Card>
+        </Col>
+
+        <Col span={6}>
+          <Card title="Top khách hàng tiềm năng" loading={loading.payment}>
+            <List
+              dataSource={userTopPayment}
+              renderItem={(user, index) => (
+                <List.Item>
+                  <Space direction="vertical" size={0} style={{ width: '100%' }}>
+                    <Space>
+                      <Tag color="blue">Top {index + 1}</Tag>
+                      <Avatar src={user.avatar || faker.image.avatar()} />
+                      <Text>{user.username || user.email?.split("@")[0]}</Text>
+                    </Space>
+                    <Space style={{ marginLeft: '58px', marginTop: '4px' }}>
+                      <Tag color="green">{formatMoney(user?.totalPaymentAmount)}đ</Tag>
+                      <Tag color="orange">{user?.totalOrder} đơn</Tag>
+                    </Space>
+                  </Space>
+                </List.Item>
+              )}
+            />
+          </Card>
+        </Col>
+      </Row>
+
+      <Card 
+        title="Thống kê người dùng đăng ký" 
+        style={{ marginTop: '16px' }}
+        extra={
+          <Space>
+            <Select
               value={selectedMonth}
-              onChange={(e) => setSelectedMonth(parseInt(e.target.value))}
+              onChange={(value) => setSelectedMonth(value)}
+              style={{ width: 120 }}
             >
               {Array.from({ length: 12 }, (_, i) => (
-                <option key={i + 1} value={i + 1}>
+                <Option key={i + 1} value={i + 1}>
                   Tháng {i + 1}
-                </option>
+                </Option>
               ))}
-            </select>
+            </Select>
 
-            <select
-              className="border rounded px-2 py-1"
+            <Select
               value={selectedYear}
-              onChange={(e) => setSelectedYear(parseInt(e.target.value))}
+              onChange={(value) => setSelectedYear(value)}
+              style={{ width: 120 }}
             >
               {Array.from({ length: 5 }, (_, i) => (
-                <option key={i} value={new Date().getFullYear() - i}>
+                <Option key={i} value={new Date().getFullYear() - i}>
                   {new Date().getFullYear() - i}
-                </option>
+                </Option>
               ))}
-            </select>
-          </div>
-        </div>
+            </Select>
+          </Space>
+        }
+      >
+        <Spin spinning={loading.chart}>
+          <Text type="secondary" strong>
+            Tổng người dùng đăng ký tháng {selectedMonth} năm {selectedYear}: {' '}
+            <Text type="danger" strong>
+              {dataChart?.reduce((sum, item) => sum + item.users, 0) || 0} người dùng
+            </Text>
+          </Text>
 
-        <ResponsiveContainer width="100%" height="70%">
-          <BarChart
-            width={500}
-            height={300}
-            data={dataChar}
-            margin={{
-              top: 5,
-              right: 30,
-              left: 20,
-              bottom: 5,
-            }}
-            barSize={20}
-          >
-            <XAxis
-              dataKey="name"
-              scale="point"
-              padding={{ left: 10, right: 10 }}
-            />
-            <YAxis />
-            <Tooltip />
-            <Legend />
-            <CartesianGrid strokeDasharray="3 3" />
-            <Bar dataKey="users" fill="blue" background={{ fill: "#eee" }} />
-          </BarChart>
-        </ResponsiveContainer>
-      </div>
-    </div>
+          <div style={{ height: 400, marginTop: 20 }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart
+                data={dataChart}
+                margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+                barSize={20}
+              >
+                <XAxis dataKey="name" scale="point" padding={{ left: 10, right: 10 }} />
+                <YAxis />
+                <Tooltip />
+                <Legend />
+                <CartesianGrid strokeDasharray="3 3" />
+                <Bar dataKey="users" name="Người dùng" fill="#1890ff" background={{ fill: "#eee" }} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </Spin>
+      </Card>
+    </Card>
   );
 }
 

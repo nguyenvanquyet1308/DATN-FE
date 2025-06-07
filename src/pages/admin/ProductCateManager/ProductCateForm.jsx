@@ -1,4 +1,4 @@
-import { notification } from "antd";
+import { notification, Form, Input, Button, Typography, Upload, Card, Space, Divider } from "antd";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import logo from "assets/images/logo.jpg";
@@ -8,6 +8,9 @@ import MarkdownEditor from "components/MarkdownEditor";
 import { changeLoading } from "store/slicers/common.slicer";
 import { createCategory, updateCategory } from "apis/productCate.api";
 import { useDispatch } from "react-redux";
+import { PlusOutlined, UploadOutlined, SaveOutlined } from '@ant-design/icons';
+
+const { Title, Text } = Typography;
 
 function ProductCateForm({ closeModal, fetchData, categoryCurrent }) {
   const {
@@ -23,6 +26,7 @@ function ProductCateForm({ closeModal, fetchData, categoryCurrent }) {
   const [previewImg, setPreviewImg] = useState(null);
   const [imgUpload, setImageUpload] = useState(null);
   const [description, setDescription] = useState("");
+  const [isUploading, setIsUploading] = useState(false);
 
   useEffect(() => {
     const handleFillToForm = async () => {
@@ -49,26 +53,31 @@ function ProductCateForm({ closeModal, fetchData, categoryCurrent }) {
     if (description) data = { ...data, description };
 
     if (!imgUpload) {
-      notification.error({ message: "Please upload an image" });
+      notification.error({ 
+        message: "Vui lòng tải lên hình ảnh", 
+        placement: "top" 
+      });
       return;
     }
 
     const formData = new FormData();
-
     formData.append("image", imgUpload);
     formData.append("categoryData", JSON.stringify(data));
 
     try {
+      setIsUploading(true);
       dispatch(changeLoading());
       if (categoryCurrent?.id) {
         await updateCategory(categoryCurrent.id, formData);
         notification.success({
           message: "Cập nhật thành công",
+          placement: "top"
         });
       } else {
         await createCategory(formData);
         notification.success({
           message: "Tạo thành công",
+          placement: "top"
         });
       }
       await fetchData();
@@ -79,15 +88,20 @@ function ProductCateForm({ closeModal, fetchData, categoryCurrent }) {
         : "Tạo không thành công...";
       notification.error({
         message: `${errorMessage}: ${error.message}`,
+        placement: "top"
       });
     } finally {
       dispatch(changeLoading());
+      setIsUploading(false);
     }
   };
 
   const handleOnchangeThumb = async (file) => {
     if (file.type !== "image/png" && file.type !== "image/jpeg") {
-      notification.error({ message: "File not supported..." });
+      notification.error({ 
+        message: "Chỉ hỗ trợ file PNG hoặc JPEG",
+        placement: "top"
+      });
       return;
     }
 
@@ -97,69 +111,132 @@ function ProductCateForm({ closeModal, fetchData, categoryCurrent }) {
   };
 
   return (
-    <div className="flex flex-col justify-center items-center  ">
-      <div className="flex flex-col justify-center  w-full items-center ">
-        <img src={logo} alt="logo" className="w-20 object-contain" />
-        <h2 className="text-center border border-y-main w-full bg-light text-white">
-          {categoryCurrent ? `Edit Category` : "Create Category"}
-        </h2>
-      </div>
-
-      <form
-        onSubmit={handleSubmit(handleUpdate)}
-        className="flex flex-col w-full gap-2 mt-2"
-      >
-        <div className="flex items-center gap-8 justify-center">
-          <span className="font-bold">Thumb nail </span>
-          <label
-            className="h-[160px] w-[160px] border-2 border-main p-2 flex justify-center items-center"
-            htmlFor="thumbnail"
-          >
-            {previewImg ? (
-              <img
-                src={previewImg}
-                alt=""
-                className="object-contain w-full h-full"
-              />
-            ) : (
-              <h1 className="font-bold text-blue-600 ">Chọn hình ảnh</h1>
-            )}
-          </label>
+    <div className="category-form p-4">
+      <Card className="mb-6">
+        <div className="flex items-center gap-4 mb-2">
+          <img src={logo} alt="logo" className="w-10 h-10 object-contain" />
+          <Title level={4} className="m-0">
+            {categoryCurrent ? "Cập nhật loại sản phẩm" : "Tạo loại sản phẩm mới"}
+          </Title>
         </div>
-        <input
-          type="file"
-          id="thumbnail"
-          accept=".jpg, .jpeg, .png"
-          onChange={(e) => handleOnchangeThumb(e.target.files[0])}
-          className="hidden"
-        />
-        <InputForm
-          errors={errors}
-          id={"name"}
-          register={register}
-          fullWidth
-          validate={{
-            required: `Require this field`,
-          }}
-        />
-        <MarkdownEditor
-          height={200}
-          label={"Description : "}
-          name={"description"}
-          id={"description"}
-          value={description}
-          register={register}
-          validate={{}}
-          errors={errors}
-          setValue={setDescription}
-        />
-        <button
-          className="w-full p-2 bg-light text-lg text-white "
-          type="submit"
+        <Divider />
+
+        <Form
+          layout="vertical"
+          onFinish={handleSubmit(handleUpdate)}
+          className="mt-4"
         >
-          {categoryCurrent ? `Update` : "Create"}
-        </button>
-      </form>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="col-span-1 flex flex-col items-center">
+              <Text strong className="mb-2">Hình ảnh</Text>
+              <div className="mb-4 w-full">
+                <Upload.Dragger
+                  className="upload-thumbnail"
+                  showUploadList={false}
+                  beforeUpload={(file) => {
+                    handleOnchangeThumb(file);
+                    return false;
+                  }}
+                  accept=".jpg,.jpeg,.png"
+                >
+                  {previewImg ? (
+                    <div className="relative group">
+                      <img
+                        src={previewImg}
+                        alt="Category thumbnail"
+                        className="max-h-[200px] w-auto mx-auto object-contain"
+                      />
+                      <div className="absolute inset-0 bg-black bg-opacity-40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                        <UploadOutlined className="text-white text-2xl" />
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="p-8 text-center">
+                      <p className="ant-upload-drag-icon">
+                        <PlusOutlined className="text-primary text-2xl" />
+                      </p>
+                      <p className="ant-upload-text">
+                        Nhấn hoặc kéo thả hình ảnh vào đây
+                      </p>
+                      <p className="ant-upload-hint text-xs">
+                        Hỗ trợ file: JPG, JPEG, PNG
+                      </p>
+                    </div>
+                  )}
+                </Upload.Dragger>
+              </div>
+            </div>
+
+            <div className="col-span-1 md:col-span-2">
+              <div className="mb-4">
+                <Text strong className="mb-2">Tên loại sản phẩm</Text>
+                <Input
+                  placeholder="Nhập tên loại sản phẩm"
+                  {...register("name", {
+                    required: "Vui lòng nhập tên loại sản phẩm",
+                  })}
+                  status={errors.name ? "error" : ""}
+                  className="w-full"
+                />
+                {errors.name && (
+                  <Text type="danger" className="mt-1">
+                    {errors.name.message}
+                  </Text>
+                )}
+              </div>
+
+              <div>
+                <Text strong className="mb-2">Mô tả</Text>
+                <MarkdownEditor
+                  height={200}
+                  name="description"
+                  id="description"
+                  value={description}
+                  register={register}
+                  validate={{}}
+                  errors={errors}
+                  setValue={setDescription}
+                />
+              </div>
+            </div>
+          </div>
+
+          <Divider />
+          
+          <div className="flex justify-end gap-3 mt-4">
+            <Button onClick={closeModal}>
+              Hủy
+            </Button>
+            <Button
+              type="primary"
+              htmlType="submit"
+              icon={<SaveOutlined />}
+              loading={isUploading}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              {categoryCurrent ? "Cập nhật" : "Tạo mới"}
+            </Button>
+          </div>
+        </Form>
+      </Card>
+
+      <style jsx global>{`
+        .upload-thumbnail .ant-upload-drag {
+          border-radius: 8px;
+          border: 2px dashed #d9d9d9;
+          transition: all 0.3s ease;
+        }
+        
+        .upload-thumbnail .ant-upload-drag:hover {
+          border-color: #1890ff;
+        }
+        
+        @media (max-width: 768px) {
+          .grid {
+            grid-template-columns: 1fr;
+          }
+        }
+      `}</style>
     </div>
   );
 }

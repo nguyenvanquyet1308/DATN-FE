@@ -3,33 +3,61 @@ import LoginIMG from "assets/images/log1.png";
 import RegisterIMG from "assets/images/register1.png";
 import paths from "constant/paths";
 import { useEffect, useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form";
 import { Link } from "react-router-dom";
-import ICONS from "utils/icons";
 import { jwtDecode } from "jwt-decode";
 import FacebookLogin from "react-facebook-login";
 import withBaseComponent from "hocs";
 import { loginRequest, registerRequest } from "store/slicers/auth.slicer";
 import { useSelector } from "react-redux";
-import { notification } from "antd";
+import { 
+  notification, 
+  Card, 
+  Form, 
+  Input, 
+  Button, 
+  Typography, 
+  Divider, 
+  Space, 
+  Row, 
+  Col, 
+  Spin 
+} from "antd";
+import { 
+  UserOutlined, 
+  LockOutlined, 
+  MailOutlined, 
+  ArrowLeftOutlined,
+  LoginOutlined,
+  UserAddOutlined
+} from '@ant-design/icons';
 import TypingText from "components/TypingText";
-import Icons from "utils/icons";
 import { resetMessageData, setMessageData } from "store/slicers/common.slicer";
+
+const { Title, Text, Paragraph } = Typography;
 
 const Login = ({ dispatch, navigate }) => {
   const [signUpMode, setSignUpMode] = useState(false);
   const { error, loading } = useSelector((state) => state.auth.authInfo);
   const { messageSystem } = useSelector((state) => state.common);
+  
   useEffect(() => {
     dispatch(resetMessageData());
   }, []);
 
   const {
-    register,
+    control,
     handleSubmit,
     formState: { errors },
     watch,
-  } = useForm();
+  } = useForm({
+    defaultValues: {
+      email: '',
+      password: '',
+      confirm_password: ''
+    }
+  });
+  
   const password = watch("password");
 
   const onSubmit = (data) => {
@@ -49,6 +77,7 @@ const Login = ({ dispatch, navigate }) => {
             notification.warning({
               message,
               duration: 3,
+              placement: "top"
             });
           },
         }),
@@ -66,6 +95,7 @@ const Login = ({ dispatch, navigate }) => {
           notification.success({
             message: "Chào mừng quay trở lại.",
             duration: 2,
+            placement: "top"
           });
           navigate("/");
         },
@@ -73,6 +103,7 @@ const Login = ({ dispatch, navigate }) => {
           notification.warning({
             message: "Tài khoản hoặc mật khẩu sai...",
             duration: 3,
+            placement: "top"
           });
         },
       }),
@@ -85,168 +116,196 @@ const Login = ({ dispatch, navigate }) => {
 
   return (
     <GoogleOAuthProvider clientId="1092538276024-m6skkb7i3lhdmilk6mssvnjs0r5egolm.apps.googleusercontent.com">
-      <div className="flex min-h-screen justify-center items-center bg-light">
+      <div className="min-h-screen bg-gradient-to-r from-blue-50 to-indigo-50 flex justify-center items-center p-4">
         {messageSystem.isShow ? (
-          <div
-            key={signUpMode}
-            className="w-1/2 bg-white flex justify-center items-center rounded py-4 px-8"
-            data-aos={"zoom-out-down"}
+          <Card
+            className="w-full max-w-lg shadow-lg animate__animated animate__fadeIn"
+            bordered={false}
+            data-aos="zoom-out-down"
           >
-            <h1 className="w-full flex flex-col gap-2 ">
-              <Link to={paths.HOME}>
-                <button className="flex items-center text-red-500 hover:bg-opacity-90 py-1 rounded my-2">
-                  <ICONS.FaArrowLeft size={14} className="mr-2" />
-                  Trang chủ
-                </button>
-              </Link>
-              <div className="flex justify-between">
-                <div className="font-bold text-blue-600 text-lg">
-                  Cảm ơn bạn đã tham gia dịch vụ!
-                </div>
-                <span
-                  className="cursor-pointer text-primary font-bold"
-                  onClick={() => dispatch(resetMessageData())}
-                >
-                  Đăng kí với mail khác
-                </span>
-              </div>
-              {messageSystem.message && (
-                <TypingText text={messageSystem.message} typeSpeed={10} />
-              )}
-            </h1>
-          </div>
+            <Link to={paths.HOME}>
+              <Button 
+                type="text" 
+                icon={<ArrowLeftOutlined />} 
+                className="text-blue-500 hover:text-blue-700 mb-4"
+              >
+                Trang chủ
+              </Button>
+            </Link>
+            
+            <div className="flex justify-between items-center mb-6">
+              <Title level={4} className="text-blue-600 m-0">
+                Cảm ơn bạn đã tham gia dịch vụ!
+              </Title>
+              <Button 
+                type="link" 
+                className="font-medium"
+                onClick={() => dispatch(resetMessageData())}
+              >
+                Đăng kí với mail khác
+              </Button>
+            </div>
+            
+            {messageSystem.message && (
+              <Card className="bg-blue-50 border-blue-200">
+                <TypingText text={messageSystem.message} typeSpeed={10} className="text-gray-700" />
+              </Card>
+            )}
+          </Card>
         ) : (
-          <div
-            key={signUpMode}
-            className="bg-white flex justify-center items-center rounded py-4 px-8"
+          <Row 
+            gutter={[24, 0]} 
+            className="w-full max-w-5xl"
             data-aos={signUpMode ? "flip-right" : "flip-left"}
           >
-            <div className="w-full">
-              <Link to={paths.HOME}>
-                <button className="flex items-center text-red-500 hover:bg-opacity-90 py-1 rounded my-2">
-                  <ICONS.FaArrowLeft size={14} className="mr-2" />
-                  Trang chủ
-                </button>
-              </Link>
-              <div
-                className={`signin-signup max-w-md shadow-sm rounded-lg p-8 ${
-                  signUpMode ? "shadow-orange-600" : "shadow-blue-600"
-                }`}
+            <Col xs={24} md={14}>
+              <Card 
+                bordered={false}
+                className="shadow-lg h-full transition-all duration-300 hover:shadow-xl"
+                bodyStyle={{ padding: '30px' }}
               >
-                <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-                  <h2
-                    className={`text-2xl font-semibold text-center ${
-                      signUpMode ? "text-orange-600" : "text-indigo-600"
-                    }`}
+                <Link to={paths.HOME}>
+                  <Button 
+                    type="text" 
+                    icon={<ArrowLeftOutlined />} 
+                    className="text-blue-500 hover:text-blue-700 mb-4"
                   >
-                    {signUpMode ? "Sign up" : "Sign In"}
-                  </h2>
+                    Trang chủ
+                  </Button>
+                </Link>
+                
+                <div className="text-center mb-6">
+                  <Title level={2} className={signUpMode ? "text-orange-500" : "text-blue-500"}>
+                    {signUpMode ? "Đăng ký" : "Đăng nhập"}
+                  </Title>
+                  <Paragraph className="text-gray-500">
+                    {signUpMode 
+                      ? "Tạo tài khoản mới để trải nghiệm dịch vụ của chúng tôi" 
+                      : "Đăng nhập để tiếp tục mua sắm"}
+                  </Paragraph>
+                </div>
 
-                  <div className="relative">
-                    <i className="fas fa-envelope absolute left-3 top-3 text-gray-500"></i>
-                    <input
-                      type="email"
-                      placeholder="Email"
-                      {...register("email", {
-                        required: "Email is required",
+                <Form
+                  layout="vertical"
+                  onFinish={handleSubmit(onSubmit)}
+                  className="max-w-md mx-auto"
+                >
+                  <Form.Item 
+                    label="Email"
+                    validateStatus={errors.email ? "error" : ""}
+                    help={errors.email?.message}
+                  >
+                    <Controller
+                      name="email"
+                      control={control}
+                      rules={{
+                        required: "Email là bắt buộc",
                         pattern: {
                           value: /\S+@\S+\.\S+/,
-                          message: "Invalid email format",
+                          message: "Email không đúng định dạng",
                         },
-                      })}
-                      className="w-full py-2 px-2 border rounded-lg focus:outline-none focus:border-indigo-500"
+                      }}
+                      render={({ field }) => (
+                        <Input
+                          {...field}
+                          prefix={<MailOutlined className="text-gray-400" />}
+                          placeholder="Nhập email của bạn"
+                          size="large"
+                        />
+                      )}
                     />
-                    {errors.email && (
-                      <p className="text-red-600 text-sm mt-1">
-                        {errors.email.message}
-                      </p>
-                    )}
-                  </div>
+                  </Form.Item>
 
-                  <div className="relative">
-                    <i className="fas fa-lock absolute left-3 top-3 text-gray-500"></i>
-                    <input
-                      type="password"
-                      placeholder="Password"
-                      {...register("password", {
-                        required: "Password is required",
+                  <Form.Item 
+                    label="Mật khẩu"
+                    validateStatus={errors.password ? "error" : ""}
+                    help={errors.password?.message}
+                  >
+                    <Controller
+                      name="password"
+                      control={control}
+                      rules={{
+                        required: "Mật khẩu là bắt buộc",
                         minLength: {
                           value: 6,
-                          message: "Password must be at least 6 characters",
+                          message: "Mật khẩu phải có ít nhất 6 ký tự",
                         },
-                      })}
-                      className="w-full py-2 px-2 border rounded-lg focus:outline-none focus:border-indigo-500"
+                      }}
+                      render={({ field }) => (
+                        <Input.Password
+                          {...field}
+                          prefix={<LockOutlined className="text-gray-400" />}
+                          placeholder="Nhập mật khẩu"
+                          size="large"
+                        />
+                      )}
                     />
-                    {errors.password && (
-                      <p className="text-red-600 text-sm mt-1">
-                        {errors.password.message}
-                      </p>
-                    )}
-                  </div>
+                  </Form.Item>
 
                   {signUpMode && (
-                    <div className="relative">
-                      <i className="fas fa-lock absolute left-3 top-3 text-gray-500"></i>
-                      <input
-                        type="password"
-                        placeholder="Confirm Password"
-                        {...register("confirm_password", {
+                    <Form.Item 
+                      label="Xác nhận mật khẩu"
+                      validateStatus={errors.confirm_password ? "error" : ""}
+                      help={errors.confirm_password?.message}
+                    >
+                      <Controller
+                        name="confirm_password"
+                        control={control}
+                        rules={{
                           validate: (value) =>
-                            value === password || "Passwords do not match",
-                        })}
-                        className="w-full p-2 border rounded-lg focus:outline-none focus:border-indigo-500"
+                            value === password || "Mật khẩu không khớp",
+                        }}
+                        render={({ field }) => (
+                          <Input.Password
+                            {...field}
+                            prefix={<LockOutlined className="text-gray-400" />}
+                            placeholder="Xác nhận mật khẩu"
+                            size="large"
+                          />
+                        )}
                       />
-                      {errors.confirm_password && (
-                        <p className="text-red-600 text-sm mt-1">
-                          {errors.confirm_password.message}
-                        </p>
-                      )}
-                    </div>
+                    </Form.Item>
                   )}
 
-                  <div
-                    className={`w-full py-2 mt-4 ${
-                      signUpMode
-                        ? "bg-orange-600 hover:bg-orange-500"
-                        : "bg-indigo-600 hover:bg-indigo-500"
-                    } text-white rounded-lg focus:outline-none cursor-pointer flex  gap-2 items-center `}
-                  >
-                    <input
-                      className="w-full h-full flex relative"
-                      type="submit"
-                      value={
-                        loading
-                          ? "Loading..."
-                          : signUpMode
-                            ? "Sign up"
-                            : "Sign In"
-                      }
-                      disabled={loading}
-                    />
-                  </div>
+                  <Form.Item className="mt-6">
+                    <Button
+                      type="primary"
+                      htmlType="submit"
+                      block
+                      size="large"
+                      className={`h-12 ${signUpMode ? 'bg-orange-500 hover:bg-orange-600' : 'bg-blue-500 hover:bg-blue-600'}`}
+                      icon={signUpMode ? <UserAddOutlined /> : <LoginOutlined />}
+                      loading={loading}
+                    >
+                      {loading
+                        ? "Đang xử lý..."
+                        : signUpMode
+                          ? "Đăng ký"
+                          : "Đăng nhập"}
+                    </Button>
+                  </Form.Item>
 
-                  <p className="text-center text-gray-500 mt-4">
-                    {signUpMode
-                      ? "Or Sign up with social platforms"
-                      : "Or Sign in with social platforms"}
-                  </p>
-
-                  <div className="flex justify-center space-x-4 mt-4 items-center">
+                  <Divider plain><Text type="secondary">hoặc đăng nhập với</Text></Divider>
+                  
+                  <div className="flex flex-col md:flex-row justify-center gap-3 mt-4">
                     <FacebookLogin
                       textButton={
-                        <div className="text-[12px] font-sans">
-                          Đăng nhập bằng Facebook
-                        </div>
+                        <span className="text-sm">Đăng nhập bằng Facebook</span>
                       }
-                      cssClass="flex gap-2 rounded border p-2 items-center text-sm text-nowrap text-black flex-1 h-[40px] text-sm"
+                      cssClass="flex items-center justify-center gap-2 border rounded-md py-2 px-3 bg-white hover:bg-gray-50 transition text-gray-700 w-full md:flex-grow"
                       appId="2041983982905103"
                       autoLoad={false}
                       fields="name,email,picture"
                       callback={responseFacebook}
-                      icon={<ICONS.FaFacebook size={24} color={"blue"} />}
+                      icon={<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="#1877f2"><path d="M12.001 2.002c-5.522 0-9.999 4.477-9.999 9.999 0 4.99 3.656 9.126 8.437 9.879v-6.988h-2.54v-2.891h2.54V9.798c0-2.508 1.493-3.891 3.776-3.891 1.094 0 2.24.195 2.24.195v2.459h-1.264c-1.24 0-1.628.772-1.628 1.563v1.875h2.771l-.443 2.891h-2.328v6.988C18.344 21.129 22 16.992 22 12.001c0-5.522-4.477-9.999-9.999-9.999z"></path></svg>}
                     />
+                    
                     <GoogleLogin
-                      text="Login With Google"
+                      size="large"
+                      theme="outline"
+                      shape="rectangular"
+                      width="100%"
+                      text="signin_with"
                       onSuccess={(credentialResponse) => {
                         console.log(jwtDecode(credentialResponse.credential));
                       }}
@@ -255,38 +314,49 @@ const Login = ({ dispatch, navigate }) => {
                       }}
                     />
                   </div>
-                </form>
-              </div>
-            </div>
-
-            <div
-              className="flex flex-col w-1/2 items-center justify-center p-4"
-              data-aos="zoom-in"
-            >
-              <div className="text-center">
-                <h3 className="text-lg font-semibold text-neutral-500">
+                </Form>
+              </Card>
+            </Col>
+            
+            <Col xs={24} md={10} className="hidden md:flex flex-col items-center justify-center p-4">
+              <div className="text-center mb-6" data-aos="fade-up">
+                <Title level={3} className={`text-gray-700`}>
                   {signUpMode
-                    ? "Already have an account?"
-                    : "Don't have an account?"}
-                </h3>
-                <div
-                  className={`font-bold cursor-pointer rounded mt-4 px-2 py-1 border transition-all ${
-                    signUpMode
-                      ? "text-indigo-600 hover:text-indigo-500"
-                      : "text-orange-600 hover:text-orange-500"
-                  }`}
+                    ? "Đã có tài khoản?"
+                    : "Chưa có tài khoản?"}
+                </Title>
+                <Button
+                  type={signUpMode ? "primary" : "default"}
+                  size="large"
                   onClick={() => setSignUpMode(!signUpMode)}
+                  className={`mt-2 px-8 ${signUpMode ? 'bg-blue-500' : 'border-orange-500 text-orange-500 hover:border-orange-600 hover:text-orange-600'}`}
                 >
-                  {signUpMode ? "Sign In Now." : "Sign Up Now."}
-                </div>
+                  {signUpMode ? "Đăng nhập ngay" : "Đăng ký ngay"}
+                </Button>
               </div>
               <img
                 src={signUpMode ? RegisterIMG : LoginIMG}
-                className="w-64 mt-4"
+                className="w-full max-w-xs mt-4 transition-all duration-500 transform hover:scale-105"
                 alt={signUpMode ? "Register" : "Login"}
+                data-aos="zoom-in"
               />
-            </div>
-          </div>
+            </Col>
+            
+            <Col xs={24} className="md:hidden mt-8 text-center">
+              <Space direction="vertical" align="center" className="w-full">
+                <Text className="text-gray-600">
+                  {signUpMode ? "Đã có tài khoản?" : "Chưa có tài khoản?"}
+                </Text>
+                <Button 
+                  type="link" 
+                  onClick={() => setSignUpMode(!signUpMode)}
+                  className={signUpMode ? "text-blue-500" : "text-orange-500"}
+                >
+                  {signUpMode ? "Đăng nhập ngay" : "Đăng ký ngay"}
+                </Button>
+              </Space>
+            </Col>
+          </Row>
         )}
       </div>
     </GoogleOAuthProvider>

@@ -1,11 +1,19 @@
-import { notification } from "antd";
-import {
-  getPaymentDailyStatistics,
-  getPaymentStatistics,
-} from "apis/revenue.api";
 import React, { useEffect, useState } from "react";
-import { formatCurrency, formatMoney } from "utils/helper";
-import Icons from "utils/icons";
+import { 
+  Card, 
+  Row, 
+  Col, 
+  Typography, 
+  Select, 
+  notification, 
+  Statistic, 
+  Avatar, 
+  List, 
+  Divider, 
+  Space, 
+  Tag,
+  Spin
+} from "antd";
 import {
   BarChart,
   Bar,
@@ -18,21 +26,70 @@ import {
   Rectangle,
 } from "recharts";
 import {
+  getPaymentDailyStatistics,
+  getPaymentStatistics,
+} from "apis/revenue.api";
+import {
   getStatisticUserByStatus,
   getStatisticUserTopPayment,
 } from "apis/user.api";
 import { getOrderStatisticStatus } from "apis/order.api";
-import { convertVI } from "utils/covertDataUI";
 import { getRentalStatisticStatus } from "apis/rental.api";
+import { convertVI } from "utils/covertDataUI";
+import { formatCurrency, formatMoney } from "utils/helper";
 import { faker } from "@faker-js/faker";
+import Icons from "utils/icons";
+
+const { Title, Text } = Typography;
+const { Option } = Select;
+
+const STATUS_COLORS = {
+  "Đã giao": "success",
+  "Đã hủy": "error",
+  "Đang xử lí": "warning",
+  "Chưa thanh toán": "orange",
+  "Đang giao": "processing",
+  "Đã hoàn thành": "success",
+  "Đang thuê": "blue",
+  "Quá hạn": "red"
+};
+
+const USER_STATUS_CONFIG = {
+  "INACTIVE": {
+    text: "Chưa kích hoạt",
+    icon: <Icons.TbLockOff color="gray" />,
+    textColor: "text-gray-400",
+    color: "default",
+  },
+  "BLOCKED": {
+    text: "Đã bị khóa",
+    icon: <Icons.TbLockOpenOff color="red" />,
+    textColor: "text-red-500",
+    color: "error",
+  },
+  "ACTIVE": {
+    text: "Kích hoạt",
+    icon: <Icons.FaCheck color="green" />,
+    textColor: "text-green-600",
+    color: "success",
+  }
+};
 
 function Dashboard() {
-  const [revenueGeneralData, setRevenueGeneralData] = useState([]);
+  const [revenueGeneralData, setRevenueGeneralData] = useState({});
   const [dataCharRevenue, setDataCharRevenue] = useState([]);
-  const [userStatus, setUserStatus] = useState([]);
-  const [orderStatus, setOrderStatus] = useState([]);
-  const [rentalStatus, setRentalStatus] = useState([]);
+  const [userStatus, setUserStatus] = useState({});
+  const [orderStatus, setOrderStatus] = useState({});
+  const [rentalStatus, setRentalStatus] = useState({});
   const [userTopPayment, setUserTopPayment] = useState([]);
+  const [loading, setLoading] = useState({
+    revenue: false,
+    chart: false,
+    userStatus: false,
+    orderStatus: false,
+    rentalStatus: false,
+    userTopPayment: false
+  });
 
   const [selectedMonthRevenue, setSelectedMonthRevenue] = useState(
     new Date().getMonth() + 1,
@@ -43,91 +100,115 @@ function Dashboard() {
 
   const fetchRevenueGeneralData = async () => {
     try {
+      setLoading(prev => ({ ...prev, revenue: true }));
       const dataGeneral = await getPaymentStatistics();
       setRevenueGeneralData(dataGeneral);
     } catch (error) {
       notification.warning({
-        message: error.message,
-        duration: 2,
+        message: "Lỗi khi tải dữ liệu doanh thu",
+        description: error.message || "Đã xảy ra lỗi, vui lòng thử lại sau",
+        duration: 3,
         placement: "top",
       });
+    } finally {
+      setLoading(prev => ({ ...prev, revenue: false }));
     }
   };
 
   const fetchDataCharRevenue = async () => {
     try {
+      setLoading(prev => ({ ...prev, chart: true }));
       const dataChar = await getPaymentDailyStatistics(
         selectedMonthRevenue,
         selectedYearRevenue,
       );
 
       if (dataChar) {
-        const chartData = Object.entries(dataChar || {}).map((value) => ({
-          name: `${value[0]}`,
-          revenue: value[1]?.revenue,
-          order: value[1]?.count,
+        const chartData = Object.entries(dataChar || {}).map(([day, data]) => ({
+          name: day,
+          revenue: data?.revenue || 0,
+          order: data?.count || 0,
         }));
 
         setDataCharRevenue(chartData);
       }
     } catch (error) {
       notification.warning({
-        message: error.message,
-        duration: 2,
+        message: "Lỗi khi tải dữ liệu biểu đồ",
+        description: error.message || "Đã xảy ra lỗi, vui lòng thử lại sau",
+        duration: 3,
         placement: "top",
       });
+    } finally {
+      setLoading(prev => ({ ...prev, chart: false }));
     }
   };
 
   const fetchUserStatusStatistic = async () => {
     try {
+      setLoading(prev => ({ ...prev, userStatus: true }));
       const res = await getStatisticUserByStatus();
-      setUserStatus(res);
+      setUserStatus(res || {});
     } catch (error) {
       notification.warning({
-        message: error.message,
-        duration: 2,
+        message: "Lỗi khi tải dữ liệu người dùng",
+        description: error.message || "Đã xảy ra lỗi, vui lòng thử lại sau",
+        duration: 3,
         placement: "top",
       });
+    } finally {
+      setLoading(prev => ({ ...prev, userStatus: false }));
     }
   };
 
   const handleFetchOrderStatus = async () => {
     try {
+      setLoading(prev => ({ ...prev, orderStatus: true }));
       const orderStatusData = await getOrderStatisticStatus();
-      setOrderStatus(orderStatusData);
+      setOrderStatus(orderStatusData || {});
     } catch (error) {
       notification.warning({
-        message: error.message,
-        duration: 2,
+        message: "Lỗi khi tải dữ liệu đơn hàng",
+        description: error.message || "Đã xảy ra lỗi, vui lòng thử lại sau",
+        duration: 3,
         placement: "top",
       });
+    } finally {
+      setLoading(prev => ({ ...prev, orderStatus: false }));
     }
   };
 
   const handleFetchRentalStatus = async () => {
     try {
+      setLoading(prev => ({ ...prev, rentalStatus: true }));
       const rentalStatusData = await getRentalStatisticStatus();
-      setRentalStatus(rentalStatusData);
+      setRentalStatus(rentalStatusData || {});
     } catch (error) {
       notification.warning({
-        message: error.message,
-        duration: 2,
+        message: "Lỗi khi tải dữ liệu đơn thuê",
+        description: error.message || "Đã xảy ra lỗi, vui lòng thử lại sau",
+        duration: 3,
         placement: "top",
       });
+    } finally {
+      setLoading(prev => ({ ...prev, rentalStatus: false }));
     }
   };
 
   const fetchUserPaymentStatistic = async () => {
     try {
+      setLoading(prev => ({ ...prev, userTopPayment: true }));
       const res = await getStatisticUserTopPayment();
-      setUserTopPayment(res);
+      setUserTopPayment(res || []);
     } catch (error) {
       notification.warning({
-        message: error.message,
-        duration: 2,
+        message: "Lỗi khi tải dữ liệu khách hàng",
+        description: error.message || "Đã xảy ra lỗi, vui lòng thử lại sau",
+        duration: 3,
         placement: "top",
       });
+    } finally {
+      setLoading(prev => ({ ...prev, userTopPayment: false }));
     }
   };
 
@@ -145,307 +226,328 @@ function Dashboard() {
   }, []);
 
   const convertStatusUserUI = (status) => {
-    if (!status) return {};
-
-    if (status == "INACTIVE")
-      return {
-        text: "Chưa kích hoạt",
-        icon: <Icons.TbLockOff color="gray" />,
-        textColor: "text-gray-400",
-      };
-
-    if (status == "BLOCKED")
-      return {
-        text: "Đã bị khóa",
-        icon: <Icons.TbLockOpenOff color="red" />,
-        textColor: "text-red-500",
-      };
-
-    return {
-      text: "Kích hoạt",
-      icon: <Icons.FaCheck color="green" />,
-      textColor: "text-green-600",
-    };
+    return USER_STATUS_CONFIG[status] || USER_STATUS_CONFIG.ACTIVE;
   };
 
-  const convertTextColor = (text) => {
-    if (text === "Đã giao") return "text-green-600";
-    if (text === "Đã hủy") return "text-red-600";
-    if (text === "Đang xử lí") return "text-yellow-500";
-    if (text === "Chưa thanh toán") return "text-orange-500";
-    if (text === "Đang giao") return "text-purple-600";
-    return "text-blue-600";
+  const getStatusColor = (status) => {
+    return STATUS_COLORS[status] || "default";
   };
+
+  const totalUsers = Object.values(userStatus).reduce(
+    (sum, curr) => (sum + (curr || 0)), 0
+  );
+  
+  const totalOrders = Object.values(orderStatus).reduce(
+    (sum, curr) => (sum + (curr || 0)), 0
+  );
+  
+  const totalRentals = Object.values(rentalStatus).reduce(
+    (sum, curr) => (sum + (curr || 0)), 0
+  );
+
+  const revenueTimeFrames = [
+    { 
+      title: "Hôm nay", 
+      icon: <Icons.LiaCalendarDaySolid size={20} />,
+      color: "green",
+      data: revenueGeneralData?.today 
+    },
+    { 
+      title: "Hôm qua", 
+      icon: <Icons.LiaCalendarDaySolid size={20} />,
+      color: "orange",
+      data: revenueGeneralData?.yesterday 
+    },
+    { 
+      title: "Tuần này", 
+      icon: <Icons.FaCalendarWeek size={20} />,
+      color: "blue",
+      data: revenueGeneralData?.thisWeek 
+    },
+    { 
+      title: "Tháng này", 
+      icon: <Icons.MdCalendarMonth size={20} />,
+      color: "#722ed1",
+      data: revenueGeneralData?.thisMonth 
+    },
+    { 
+      title: "Năm này", 
+      icon: <Icons.MdSelectAll size={20} />,
+      color: "green",
+      data: revenueGeneralData?.thisYear 
+    }
+  ];
+
+  const renderStatisticCard = (title, total, suffix, data, renderItem, isLoading) => (
+    <Card 
+      title={<Title level={4}>{title}</Title>}
+      bordered={true}
+      className="h-100"
+    >
+      {isLoading ? (
+        <div style={{ textAlign: 'center', padding: '20px' }}>
+          <Spin />
+        </div>
+      ) : (
+        <>
+          <Statistic 
+            title="Tổng số" 
+            value={total} 
+            suffix={suffix}
+            valueStyle={{ color: "#1890ff" }}
+            prefix={<Icons.MdOutlineClearAll />}
+          />
+          <Divider />
+          <List
+            itemLayout="horizontal"
+            dataSource={Object.entries(data)}
+            renderItem={renderItem}
+            locale={{ emptyText: "Không có dữ liệu" }}
+          />
+        </>
+      )}
+    </Card>
+  );
 
   return (
-    <div className="flex flex-col gap-4 mt-8 px-4">
-      <div className="flex justify-around">
-        <div className="border rounded bg-white  flex flex-col  py-2 px-4 border-primary">
-          <h1 className=" font-bold border-b border-primary py-2 text-primary px-12">
-            Tổng số người dùng
-          </h1>
-          <div className="flex flex-col gap-2 px-2">
-            <div className="flex gap-4 justify-between text-lg">
-              <div className="flex gap-2 items-center text-blue-600">
-                <p>{<Icons.MdOutlineClearAll />}</p>
-                <p>Tổng số</p>
-              </div>
-              <p>
-                {Object.values(userStatus).reduce(
-                  (sum, curr) => (sum += curr),
-                  0,
-                )}{" "}
-                người
-              </p>
-            </div>
-            {Object.entries(userStatus)?.map(([status, userNumber]) => (
-              <div className="flex gap-4 justify-between text-lg">
-                <div className="flex gap-2 items-center text-primary">
-                  <p>{convertStatusUserUI(status)?.icon}</p>
-                  <p className={convertStatusUserUI(status)?.textColor}>
-                    {convertStatusUserUI(status)?.text}
-                  </p>
-                </div>
-                <p>{userNumber} tài khoản</p>
-              </div>
-            ))}
-          </div>
-        </div>
-        <div className="border rounded bg-white  flex flex-col  py-2 px-4 border-primary">
-          <h1 className=" font-bold border-b border-primary py-2 text-primary px-12">
-            Tổng số đơn mua
-          </h1>
-          <div className="flex flex-col gap-2 px-2">
-            <div className="flex gap-4 justify-between text-lg">
-              <div className="flex gap-2 items-center text-blue-600">
-                <p>{<Icons.MdOutlineClearAll />}</p>
-                <p>Tổng số</p>
-              </div>
-              <p>
-                {Object.values(orderStatus).reduce(
-                  (sum, curr) => (sum += curr),
-                  0,
-                )}{" "}
-                đơn
-              </p>
-            </div>
-            {Object.entries(orderStatus)?.map(([status, number]) => (
-              <div className="flex gap-4 justify-between text-lg">
-                <p className={convertTextColor(convertVI(status))}>
-                  {convertVI(status)}
-                </p>
-                <p>{number}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-        <div className="border rounded bg-white  flex flex-col  py-2 px-4 border-primary">
-          <h1 className=" font-bold border-b border-primary py-2 text-primary px-12">
-            Tổng số đơn thuê
-          </h1>
-          <div className="flex flex-col gap-2 px-2">
-            <div className="flex gap-4 justify-between text-lg">
-              <div className="flex gap-2 items-center text-blue-600">
-                <p>{<Icons.MdOutlineClearAll />}</p>
-                <p>Tổng số</p>
-              </div>
-              <p>
-                {Object.values(rentalStatus).reduce(
-                  (sum, curr) => (sum += curr),
-                  0,
-                )}{" "}
-                đơn
-              </p>
-            </div>
-            {Object.entries(rentalStatus)?.map(([status, number]) => (
-              <div className="flex gap-4 justify-between text-lg">
-                <p className={convertTextColor(convertVI(status))}>
-                  {convertVI(status)}
-                </p>
-                <p>{number}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-        <div className="border rounded bg-white  flex flex-col  py-2 px-4">
-          <h1 className=" font-bold border-b border-primary py-2 text-primary px-12 text-center">
-            Top khách hàng tiềm năng
-          </h1>
-          <div className="flex flex-col gap-2 px-2 mt-2 max-h-[20vh] overflow-y-auto">
-            {userTopPayment.map((user, index) => (
-              <div className="flex gap-4 items-center">
-                <div className="px-4 py-1 bg-blue-600 text-white text-sm rounded font-semibold italic">
-                  Top {index + 1}
-                </div>
-                <div className="flex items-center gap-2 ">
-                  <div className="flex items-center">
-                    <img
-                      src={user.avatar || faker.image.avatar()}
-                      alt=""
-                      className="w-8 h-8 object-cover rounded-full"
-                    />
-                    <div className="text-lg">
-                      {user.username || user.email.split("@")[0]}
-                    </div>
-                  </div>
-                  <div className="pl-2 border-l flex gap-2 items-center">
-                    <div>{formatMoney(user?.totalPaymentAmount)}đ</div>
-                    <div className="pl-2 border-l">{user?.totalOrder} đơn</div>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-      <div className="flex gap-2 bg-white px-4 py-2 rounded w-full">
-        <div className="flex flex-col gap-2 border w-4/5">
-          <div className="flex justify-between">
-            <h1 className="text-3xl text-primary font-bold px-2">Doanh thu</h1>
-            <div className="flex justify-end my-4 gap-4">
-              <select
-                className="border rounded px-2 py-1"
-                value={selectedMonthRevenue}
-                onChange={(e) =>
-                  setSelectedMonthRevenue(parseInt(e.target.value))
-                }
-              >
-                {Array.from({ length: 12 }, (_, i) => (
-                  <option key={i + 1} value={i + 1}>
-                    Tháng {i + 1}
-                  </option>
-                ))}
-              </select>
+    <div className="dashboard-container" style={{ padding: "24px" }}>
+      <Row gutter={[16, 16]}>
+        {/* Thống kê người dùng */}
+        <Col xs={24} sm={24} md={8} lg={8} xl={8}>
+          {renderStatisticCard(
+            "Tổng số người dùng",
+            totalUsers,
+            "người",
+            userStatus,
+            ([status, userNumber]) => {
+              const statusInfo = convertStatusUserUI(status);
+              return (
+                <List.Item>
+                  <List.Item.Meta
+                    avatar={statusInfo.icon}
+                    title={<Tag color={statusInfo.color}>{statusInfo.text}</Tag>}
+                  />
+                  <div>{userNumber} tài khoản</div>
+                </List.Item>
+              );
+            },
+            loading.userStatus
+          )}
+        </Col>
 
-              <select
-                className="border rounded px-2 py-1"
-                value={selectedYearRevenue}
-                onChange={(e) =>
-                  setSelectedYearRevenue(parseInt(e.target.value))
-                }
-              >
-                {Array.from({ length: 5 }, (_, i) => (
-                  <option key={i} value={new Date().getFullYear() - i}>
-                    {new Date().getFullYear() - i}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
+        {/* Thống kê đơn mua */}
+        <Col xs={24} sm={24} md={8} lg={8} xl={8}>
+          {renderStatisticCard(
+            "Tổng số đơn mua",
+            totalOrders,
+            "đơn",
+            orderStatus,
+            ([status, number]) => (
+              <List.Item>
+                <List.Item.Meta
+                  title={<Tag color={getStatusColor(convertVI(status))}>{convertVI(status)}</Tag>}
+                />
+                <div>{number}</div>
+              </List.Item>
+            ),
+            loading.orderStatus
+          )}
+        </Col>
 
-          <div className="w-full h-96">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart
-                width={500}
-                height={300}
-                data={dataCharRevenue}
-                margin={{
-                  top: 5,
-                  right: 30,
-                  left: 20,
-                  bottom: 5,
+        {/* Thống kê đơn thuê */}
+        <Col xs={24} sm={24} md={8} lg={8} xl={8}>
+          {renderStatisticCard(
+            "Tổng số đơn thuê",
+            totalRentals,
+            "đơn",
+            rentalStatus,
+            ([status, number]) => (
+              <List.Item>
+                <List.Item.Meta
+                  title={<Tag color={getStatusColor(convertVI(status))}>{convertVI(status)}</Tag>}
+                />
+                <div>{number}</div>
+              </List.Item>
+            ),
+            loading.rentalStatus
+          )}
+        </Col>
+
+        {/* Top khách hàng */}
+        <Col xs={24} sm={24} md={24} lg={24} xl={24}>
+          <Card 
+            title={<Title level={4}>Top khách hàng tiềm năng</Title>}
+            bordered={true}
+          >
+            {loading.userTopPayment ? (
+              <div style={{ textAlign: 'center', padding: '20px' }}>
+                <Spin />
+              </div>
+            ) : (
+              <List
+                grid={{ 
+                  gutter: 16, 
+                  xs: 1, 
+                  sm: 2, 
+                  md: 3, 
+                  lg: 4, 
+                  xl: 4, 
+                  xxl: 5 
                 }}
-                barSize={20}
-              >
-                <XAxis
-                  dataKey="name"
-                  scale="point"
-                  padding={{ left: 10, right: 10 }}
-                />
-                <YAxis />
-                <Tooltip />
-                <Legend />
-                <CartesianGrid strokeDasharray="3 3" />
-                <Bar
-                  dataKey="revenue"
-                  fill="#8884d8"
-                  activeBar={<Rectangle fill="pink" stroke="blue" />}
-                />
-                <Bar
-                  dataKey="order"
-                  fill="#82ca9d"
-                  activeBar={<Rectangle fill="gold" stroke="purple" />}
-                />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-        <div className="px-2 border-l w-1/5">
-          <div className="flex flex-col gap-2">
-            <p className="font-bold text-primary flex gap-2 items-center">
-              <span>Tất cả</span>
-              <span className=" text-blue-600">
-                {formatMoney(
-                  Object.values(revenueGeneralData)?.reduce(
-                    (sum, value) => (sum += value?.revenue),
-                    0,
-                  ),
+                dataSource={userTopPayment}
+                locale={{ emptyText: "Không có dữ liệu" }}
+                renderItem={(user, index) => (
+                  <List.Item>
+                    <Card>
+                      <List.Item.Meta
+                        avatar={<Avatar src={user.avatar || faker.image.avatar()} size="large" />}
+                        title={
+                          <Space>
+                            <Tag color="blue">Top {index + 1}</Tag>
+                            <Text strong>{user.username || user.email?.split("@")[0] || "Người dùng"}</Text>
+                          </Space>
+                        }
+                        description={
+                          <Space split={<Divider type="vertical" />}>
+                            <Text>{formatMoney(user?.totalPaymentAmount || 0)}đ</Text>
+                            <Text>{user?.totalOrder || 0} đơn</Text>
+                          </Space>
+                        }
+                      />
+                    </Card>
+                  </List.Item>
                 )}
-                {" vnđ"}
-              </span>
-            </p>
-            <p className="flex gap-1 items-center text-blue-600 justify-end font-bold">
-              <span>
-                {Object.values(revenueGeneralData)?.reduce(
-                  (sum, value) => (sum += value?.count),
-                  0,
-                )}
-              </span>
-              <span>đơn</span>
-            </p>
-          </div>
-          <div className="flex flex-col gap-2 mt-2">
-            <div className="flex gap-2 items-center">
-              <Icons.LiaCalendarDaySolid size={30} color="green" />
-              <div>
-                <div className="text-gray-500">Hôm nay</div>
-                <div>{revenueGeneralData?.today?.count} đơn</div>
-                <div>{formatMoney(revenueGeneralData?.today?.revenue)} vnđ</div>
+              />
+            )}
+          </Card>
+        </Col>
+
+        {/* Biểu đồ doanh thu */}
+        <Col xs={24}>
+          <Card 
+            title={<Title level={4}>Doanh thu</Title>}
+            extra={
+              <Space>
+                <Select
+                  value={selectedMonthRevenue}
+                  style={{ width: 120 }}
+                  onChange={(value) => setSelectedMonthRevenue(parseInt(value))}
+                >
+                  {Array.from({ length: 12 }, (_, i) => (
+                    <Option key={i + 1} value={i + 1}>
+                      Tháng {i + 1}
+                    </Option>
+                  ))}
+                </Select>
+
+                <Select
+                  value={selectedYearRevenue}
+                  style={{ width: 120 }}
+                  onChange={(value) => setSelectedYearRevenue(parseInt(value))}
+                >
+                  {Array.from({ length: 5 }, (_, i) => (
+                    <Option key={i} value={new Date().getFullYear() - i}>
+                      {new Date().getFullYear() - i}
+                    </Option>
+                  ))}
+                </Select>
+              </Space>
+            }
+            bordered={true}
+          >
+            {loading.revenue || loading.chart ? (
+              <div style={{ textAlign: 'center', padding: '40px' }}>
+                <Spin size="large" />
               </div>
-            </div>
-            <div className="flex gap-2 items-center">
-              <Icons.LiaCalendarDaySolid size={30} color="orange" />
-              <div>
-                <div className="text-gray-500">Hôm qua</div>
-                <div>{revenueGeneralData?.yesterday?.count} đơn</div>
-                <div>
-                  {formatMoney(revenueGeneralData?.yesterday?.revenue)} vnđ
-                </div>
-              </div>
-            </div>
-            <div className="flex gap-2 items-center">
-              <Icons.FaCalendarWeek size={30} color="blue" />
-              <div>
-                <div className="text-gray-500">Tuần này</div>
-                <div>{revenueGeneralData?.thisWeek?.count} đơn</div>
-                <div>
-                  {formatMoney(revenueGeneralData?.thisWeek?.revenue)} vnđ
-                </div>
-              </div>
-            </div>
-            <div className="flex gap-2 items-center">
-              <Icons.MdCalendarMonth size={30} className="text-primary" />
-              <div>
-                <div className="text-gray-500">Tháng này</div>
-                <div>{revenueGeneralData?.thisMonth?.count} đơn</div>
-                <div>
-                  {formatMoney(revenueGeneralData?.thisMonth?.revenue)} vnđ
-                </div>
-              </div>
-            </div>
-            <div className="flex gap-2 items-center">
-              <Icons.MdSelectAll size={30} color="green" />
-              <div>
-                <div className="text-gray-500">Năm này</div>
-                <div>{revenueGeneralData?.thisYear?.count} đơn</div>
-                <div>
-                  {formatMoney(revenueGeneralData?.thisYear?.revenue)} vnđ
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+            ) : (
+              <Row gutter={16}>
+                <Col xs={24} sm={24} md={18} lg={18} xl={18}>
+                  <div style={{ width: "100%", height: 400 }}>
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart
+                        data={dataCharRevenue}
+                        margin={{
+                          top: 5,
+                          right: 30,
+                          left: 20,
+                          bottom: 5,
+                        }}
+                        barSize={20}
+                      >
+                        <XAxis
+                          dataKey="name"
+                          scale="point"
+                          padding={{ left: 10, right: 10 }}
+                        />
+                        <YAxis />
+                        <Tooltip formatter={(value) => formatMoney(value) + (value === dataCharRevenue?.[0]?.revenue ? " đ" : "")} />
+                        <Legend />
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <Bar
+                          dataKey="revenue"
+                          fill="#8884d8"
+                          name="Doanh thu"
+                          activeBar={<Rectangle fill="pink" stroke="blue" />}
+                        />
+                        <Bar
+                          dataKey="order"
+                          fill="#82ca9d"
+                          name="Số đơn"
+                          activeBar={<Rectangle fill="gold" stroke="purple" />}
+                        />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </Col>
+                
+                <Col xs={24} sm={24} md={6} lg={6} xl={6}>
+                  <Statistic
+                    title="Tổng doanh thu"
+                    value={Object.values(revenueGeneralData || {})?.reduce(
+                      (sum, value) => (sum + (value?.revenue || 0)), 0
+                    )}
+                    formatter={(value) => `${formatMoney(value)} vnđ`}
+                    valueStyle={{ color: "#3f8600" }}
+                  />
+                  
+                  <Statistic
+                    title="Tổng đơn hàng"
+                    value={Object.values(revenueGeneralData || {})?.reduce(
+                      (sum, value) => (sum + (value?.count || 0)), 0
+                    )}
+                    suffix="đơn"
+                    valueStyle={{ color: "#1890ff" }}
+                  />
+                  
+                  <Divider />
+                  
+                  <List
+                    size="small"
+                    dataSource={revenueTimeFrames}
+                    locale={{ emptyText: "Không có dữ liệu" }}
+                    renderItem={(item) => (
+                      <List.Item>
+                        <Card style={{ width: "100%" }} size="small">
+                          <List.Item.Meta
+                            avatar={<div style={{ color: item.color }}>{item.icon}</div>}
+                            title={item.title}
+                            description={
+                              <Space direction="vertical">
+                                <Text>{item.data?.count || 0} đơn</Text>
+                                <Text>{formatMoney(item.data?.revenue || 0)} vnđ</Text>
+                              </Space>
+                            }
+                          />
+                        </Card>
+                      </List.Item>
+                    )}
+                  />
+                </Col>
+              </Row>
+            )}
+          </Card>
+        </Col>
+      </Row>
     </div>
   );
 }

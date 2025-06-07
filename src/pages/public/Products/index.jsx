@@ -216,13 +216,13 @@ function Products({ useSelector, dispatch }) {
             <div className="flex gap-2 flex-wrap">
               {COLOR_DATA_OPTIONS_PANEL.map((el) => (
                 <div
+                  key={el.key}
                   onClick={() => handleFilter("color", el.key)}
-                  className={`w-9 h-9 rounded-full border border-gray-400 ${
-                    el.color
-                  } cursor-pointer ${
+                  className={`w-9 h-9 rounded-full border border-gray-400 cursor-pointer ${
                     filterParams?.color == el.key &&
                     " shadow-md shadow-blue-600 border-blue-600"
                   }`}
+                  style={{ backgroundColor: el.color }}
                 ></div>
               ))}
             </div>

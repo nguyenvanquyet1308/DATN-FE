@@ -1,5 +1,5 @@
 import { faker } from "@faker-js/faker";
-import { Button, notification, Table } from "antd";
+import { Button, notification, Table, Card, Typography, Avatar, Space, Tag, Row, Col, Image, Descriptions, Badge, Breadcrumb } from "antd";
 import { getRentalById } from "apis/rental.api";
 import logo from "assets/images/logo.jpg";
 import paths from "constant/paths";
@@ -10,6 +10,8 @@ import { HashLoader } from "react-spinners";
 import { convertVI } from "utils/covertDataUI";
 import { formatMoney } from "utils/helper";
 import Icons from "utils/icons";
+
+const { Title, Text } = Typography;
 
 function DetailRental() {
   const params = useParams();
@@ -40,81 +42,89 @@ function DetailRental() {
     fetchDetailRental();
   }, []);
 
+  const getStatusColor = (status) => {
+    const statusMap = {
+      "Đang xử lí": "processing",
+      "Đang thuê": "success",
+      "Đang giao": "warning",
+      "Đang trả": "warning",
+      "Đã hủy": "error",
+      "Chưa thanh toán": "warning",
+      "Đã hoàn thành": "success",
+      "Hết hạn": "default",
+    };
+    return statusMap[convertVI(status)] || "default";
+  };
+
   const columns = [
     {
       title: "Sản phẩm",
       dataIndex: "productName",
       key: "productName",
       render: (value, record) => (
-        <div className="flex gap-2">
-          <div className=" border relative p-2 rounded">
-            <img
-              src={record.sku.images.split(",")[0]}
-              alt=""
-              className="object-contain w-24 h-24"
-            />
-          </div>
-          <div className="flex flex-col gap-2">
-            <p className="font-bold text-primary">{value}</p>
+        <Space size="middle" align="start">
+          <Image
+            src={record.sku.images.split(",")[0]}
+            alt={value}
+            width={80}
+            height={80}
+            className="object-cover rounded border border-gray-200"
+            preview={{
+              mask: <div className="flex items-center justify-center"><Icons.FaEye /></div>
+            }}
+          />
+          <div className="flex flex-col gap-1">
+            <Text strong className="text-primary">{value}</Text>
             {record?.endAt && (
-              <div>
-                {moment(new Date(record?.endAt)).format("HH:MM:SS DD-MM-YYYY")}
-              </div>
+              <Text type="secondary">
+                {moment(new Date(record?.endAt)).format("HH:mm:ss DD-MM-YYYY")}
+              </Text>
             )}
-            <div className="flex gap-4">
-              <p>SL : x{record.quantity}</p>
+            <Space wrap>
+              <Text>SL: x{record.quantity}</Text>
+              
               {record.sku?.attributes["color"] && (
-                <p>
-                  <span className="text-gray-500">Màu : </span>
-                  <span className="font-bold">
-                    {record.sku?.attributes["color"]}
-                  </span>
-                </p>
+                <Tag color={record.sku?.attributes["color"].toLowerCase()}>
+                  Màu: {record.sku?.attributes["color"]}
+                </Tag>
               )}
+              
               {record.sku?.attributes["size"] && (
-                <p>
-                  <span className="text-gray-500">Kích thước : </span>
-                  <span className="font-bold">
-                    {record.sku?.attributes["size"]}
-                  </span>
-                </p>
+                <Tag>Kích thước: {record.sku?.attributes["size"]}</Tag>
               )}
+              
               {record.sku?.attributes["material"] && (
-                <p>
-                  <span className="text-gray-500">Chất liệu : </span>
-                  <span className="font-bold">
-                    {record.sku?.attributes["material"]}
-                  </span>
-                </p>
+                <Tag>Chất liệu: {record.sku?.attributes["material"]}</Tag>
               )}
-            </div>
+            </Space>
+            
             {data?.rentalPackage && (
-              <div className="px-4 py-1 border rounded border-primary text-primary">
+              <Tag color="blue" className="mt-1">
                 {data?.rentalPackage?.name}
-              </div>
+              </Tag>
             )}
           </div>
-        </div>
+        </Space>
       ),
     },
     {
       title: "Giá thuê",
       dataIndex: "price",
       key: "price",
-      render: (value) => <div>{formatMoney(value)}đ</div>,
+      render: (value) => <Text strong>{formatMoney(value)}đ</Text>,
     },
     {
       title: "Số lượng",
       dataIndex: "quantity",
       key: "quantity",
-      render: (value) => <div>{value}</div>,
+      render: (value) => <Badge count={value} showZero style={{ backgroundColor: "#00ADB5" }} />,
     },
     {
       title: "Tạm tính",
       dataIndex: "price",
       key: "price",
       render: (value) => (
-        <div className="text-nowrap">{formatMoney(value)}đ</div>
+        <Text strong className="text-primary">{formatMoney(value)}đ</Text>
       ),
     },
     {
@@ -122,11 +132,11 @@ function DetailRental() {
       dataIndex: "startAt",
       key: "startAt",
       render: (value) => (
-        <div className="text-nowrap">
+        <div>
           {value ? (
-            moment(new Date(value)).format("hh:mm:ss DD/MM/YYYY")
+            <Text>{moment(new Date(value)).format("HH:mm:ss DD/MM/YYYY")}</Text>
           ) : (
-            <span>{"Chưa nhận"}</span>
+            <Text type="secondary">Chưa nhận</Text>
           )}
         </div>
       ),
@@ -142,17 +152,17 @@ function DetailRental() {
         const diffHours = endTime.diff(currentTime, "hours");
         const diffMinutes = endTime.diff(currentTime, "minutes");
 
-        let textColor = "text-gray-500";
+        let tagColor = "default";
         let remainingTimeText = "";
 
         if (diffHours > 2) {
-          textColor = "text-green-500";
+          tagColor = "green";
           remainingTimeText = `${Math.abs(diffHours)} giờ nữa`;
         } else if (diffHours < 0) {
-          textColor = "text-red-500";
+          tagColor = "red";
           remainingTimeText = "Đã quá giờ";
         } else if (diffHours <= 2) {
-          textColor = "text-yellow-500";
+          tagColor = "orange";
           if (diffMinutes > 0) {
             remainingTimeText = `${Math.abs(diffMinutes)} phút nữa`;
           } else {
@@ -161,163 +171,190 @@ function DetailRental() {
         }
 
         return (
-          <div className={`text-nowrap ${textColor}`}>
+          <div>
             {value ? (
-              <>
-                <span>
-                  {moment(new Date(value)).format("hh:mm:ss DD/MM/YYYY")}
-                </span>
-                <span className="font-bold"> - Còn {remainingTimeText}</span>
-              </>
+              <Space direction="vertical" size={1}>
+                <Text>{moment(new Date(value)).format("HH:mm:ss DD/MM/YYYY")}</Text>
+                <Tag color={tagColor}>Còn {remainingTimeText}</Tag>
+              </Space>
             ) : (
-              <span>{"Chưa nhận"}</span>
+              <Text type="secondary">Chưa nhận</Text>
             )}
           </div>
         );
       },
     },
     {
-      title: "Tạm tính",
-      dataIndex: "price",
-      key: "price",
-      render: (value) => (
-        <div className="text-nowrap">{formatMoney(value)}đ</div>
-      ),
-    },
-    {
       title: "Thời hạn",
-      dataIndex: "price",
-      key: "price",
+      dataIndex: "duration",
+      key: "duration",
       render: (_, record) => (
-        <div className="text-nowrap">
-          <div className="flex gap-2 text-green-600">
-            <span>
-              <Icons.MdTimer size={20} />
-            </span>
-            {!data?.rentalPackage ? (
-              <span className="flex gap-2">
-                {record.day > 0 && <span>{record.day} ngày</span>}
-                {record.hour > 0 && <span>{record.hour} giờ</span>}
-              </span>
-            ) : (
-              <span>
-                {data?.rentalPackage?.durationDays}
-                {" ngày"}
-              </span>
-            )}
-          </div>
-        </div>
+        <Space>
+          <Icons.MdTimer size={20} className="text-green-600" />
+          {!data?.rentalPackage ? (
+            <Space>
+              {record.day > 0 && <Tag color="cyan">{record.day} ngày</Tag>}
+              {record.hour > 0 && <Tag color="blue">{record.hour} giờ</Tag>}
+            </Space>
+          ) : (
+            <Tag color="green">{data?.rentalPackage?.durationDays} ngày</Tag>
+          )}
+        </Space>
       ),
     },
   ];
 
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center min-h-screen">
+        <HashLoader size={60} color="#00ADB5" />
+      </div>
+    );
+  }
+
   return (
-    <div className="w-full p-4 flex flex-col  overflow-auto min-h-full">
-      <div className="h-[75px] flex gap-2 items-center justify-between p-2 border-b border-blue-300">
-        <div className="text-2xl font-bold flex justify-between items-center w-full ">
-          <div className="flex items-center gap-2">
+    <div className="p-6 bg-gray-50 min-h-screen">
+      <Card className="mb-6 shadow-sm">
+        <div className="flex justify-between items-center">
+          <div className="flex items-center gap-4">
             <img
               src={logo}
               alt="logo"
-              className="w-16 object-contain"
-              data-aos="fade"
+              className="w-12 h-12 object-contain rounded-md"
             />
-            <div className="items-center" data-aos="fade">
-              Đơn thuê #{data?.rentalCode}
+            <div>
+              <Breadcrumb
+                items={[
+                  { 
+                    title: 'Admin',
+                    href: paths.ADMIN.DASHBOARD
+                  },
+                  { 
+                    title: 'Quản lí đơn thuê',
+                    href: paths.ADMIN.RENTAL_MANAGEMENT
+                  },
+                  { 
+                    title: `Đơn thuê #${data?.rentalCode || ''}` 
+                  }
+                ]}
+                className="mb-1"
+              />
+              <Title level={3} className="m-0 flex items-center gap-2">
+                Đơn thuê #{data?.rentalCode}
+              </Title>
             </div>
           </div>
-          <Button onClick={() => navigate(paths.ADMIN.RENTAL_MANAGEMENT)}>
-            <div className="flex gap-2 items-center text-green-500 font-bold text-lg">
-              <span>Danh sách</span>
-            </div>
+          
+          <Button 
+            type="primary"
+            onClick={() => navigate(paths.ADMIN.RENTAL_MANAGEMENT)}
+            className="bg-primary hover:bg-primary/90"
+            icon={<Icons.FaList />}
+            size="large"
+          >
+            Danh sách đơn thuê
           </Button>
         </div>
-      </div>
+      </Card>
 
       {data && (
-        <div className="mt-6">
-          <div className=" text-xl flex gap-2 items-center">
-            <span className="text-slate-500">Tạo ngày :</span>
-            <span className="text-yellow-700">
-              {moment(new Date(data.createdAt)).format("hh:mm:ss DD:MM:YYYY")}
-            </span>
-          </div>
-          <div className="flex gap-2 mt-4 justify-around">
-            <div className="flex flex-col gap-2 py-4 px-12 rounded border bg-white">
-              <div className="font-bold text-lg border-b text-center">
-                Khách hàng
-              </div>
-              <div className="flex flex-col px-2 justify-center gap-2">
-                <div className="font-bold text-lg flex gap-2 items-center">
-                  <img
-                    className="w-8 h-8 rounded-full "
-                    src={data?.user?.avatar || faker.image.avatar()}
-                    alt={data?.user?.avatar}
-                  />
-                  {data?.user?.username || data?.user?.email.split("@")[0]}
-                </div>
-                <span>{data?.user?.email}</span>
-              </div>
-            </div>
-            <div className="flex flex-col gap-2 py-4 px-8 rounded border bg-white">
-              <div className="font-bold text-lg border-b text-center">
-                Thông tin giao
-              </div>
-              <div className="flex flex-col px-2 justify-center gap-2">
-                <div className="flex gap-2">
-                  <p className="text-gray-500">Người nhận :</p>
-                  <p className="font-bold">{data.delivery.username}</p>
-                </div>
-                <div className="flex gap-2">
-                  <p className="text-gray-500">Số điện thoại :</p>
-                  <p className="font-bold">{data.delivery.numberPhone}</p>
-                </div>
-                <div className="flex gap-2">
-                  <p className="text-gray-500">Địa chỉ :</p>
-                  <span className="text-wrap">
-                    {data?.delivery?.street}
-                    {data?.delivery?.ward && (
-                      <span>, {data?.delivery?.ward}</span>
-                    )}
-                    {data?.delivery?.district && (
-                      <span>, {data?.delivery?.district}</span>
-                    )}
-                    {data?.delivery?.city && (
-                      <span>, {data?.delivery?.city}</span>
-                    )}
-                  </span>
-                </div>
-                <div className="flex gap-2">
-                  <p className="text-gray-500">Loại địa chỉ :</p>
-                  <p className="font-bold text-green-600">
-                    {data.delivery.typeAddress}
-                  </p>
-                </div>
-              </div>
-            </div>
-            <div className="flex flex-col gap-2 py-4 px-12 rounded border bg-white justify-between">
-              <div className="font-bold text-lg border-b">Trạng thái đơn</div>
-              <div className="text-lg font-bold text-primary">
-                {convertVI(data.status)}
-              </div>
+        <div className="space-y-6">
+          <Card className="shadow-sm">
+            <div className="mb-3">
+              <Space>
+                <Text type="secondary">Ngày tạo đơn:</Text>
+                <Text strong className="text-yellow-700">
+                  {moment(new Date(data.createdAt)).format("HH:mm:ss DD/MM/YYYY")}
+                </Text>
 
-              <div className="font-bold text-lg border-b">
-                Phương thức thanh toán
-              </div>
-              <div className="text-lg font-bold text-primary">
-                {data?.payment?.method}
-              </div>
+                <Text type="secondary" className="ml-6">Trạng thái:</Text>
+                <Badge status={getStatusColor(data.status)} text={convertVI(data.status)} />
+
+                <Text type="secondary" className="ml-6">Thanh toán:</Text>
+                <Tag color="blue">{data?.payment?.method}</Tag>
+              </Space>
             </div>
-          </div>
-          <div className="my-4 text-primary text-2xl italic">
-            Danh sách hàng đã thuê
-          </div>
-          <Table columns={columns} dataSource={data?.rentalDetails} />
+
+            <Row gutter={[16, 16]}>
+              <Col xs={24} md={8}>
+                <Card 
+                  title="Thông tin khách hàng" 
+                  size="small"
+                  className="h-full"
+                  bordered
+                >
+                  <div className="flex items-center gap-3 mb-4">
+                    <Avatar 
+                      size={64} 
+                      src={data?.user?.avatar || faker.image.avatar()} 
+                      className="border-2 border-primary" 
+                    />
+                    <div>
+                      <Text strong className="text-lg block">
+                        {data?.user?.username || data?.user?.email.split("@")[0]}
+                      </Text>
+                      <Text type="secondary">{data?.user?.email}</Text>
+                    </div>
+                  </div>
+                </Card>
+              </Col>
+              
+              <Col xs={24} md={16}>
+                <Card 
+                  title="Thông tin giao hàng" 
+                  size="small"
+                  className="h-full"
+                  bordered
+                >
+                  <Descriptions column={{ xs: 1, sm: 2 }} layout="horizontal">
+                    <Descriptions.Item label="Người nhận">
+                      <Text strong>{data.delivery.username}</Text>
+                    </Descriptions.Item>
+                    <Descriptions.Item label="Số điện thoại">
+                      <Text strong>{data.delivery.numberPhone}</Text>
+                    </Descriptions.Item>
+                    <Descriptions.Item label="Loại địa chỉ" span={1}>
+                      <Tag color="green">{data.delivery.typeAddress}</Tag>
+                    </Descriptions.Item>
+                    <Descriptions.Item label="Địa chỉ" span={2}>
+                      <Text>
+                        {data?.delivery?.street}
+                        {data?.delivery?.ward && (
+                          <span>, {data?.delivery?.ward}</span>
+                        )}
+                        {data?.delivery?.district && (
+                          <span>, {data?.delivery?.district}</span>
+                        )}
+                        {data?.delivery?.city && (
+                          <span>, {data?.delivery?.city}</span>
+                        )}
+                      </Text>
+                    </Descriptions.Item>
+                  </Descriptions>
+                </Card>
+              </Col>
+            </Row>
+          </Card>
+
+          <Card 
+            title={
+              <div className="flex items-center gap-2">
+                <Icons.FaBoxOpen />
+                <span>Danh sách hàng đã thuê</span>
+              </div>
+            }
+            className="shadow-sm"
+          >
+            <Table 
+              columns={columns} 
+              dataSource={data?.rentalDetails}
+              rowKey="id"
+              bordered
+              pagination={false}
+              className="overflow-x-auto"
+            />
+          </Card>
         </div>
-      )}
-
-      {isLoading && (
-        <HashLoader size={100} color="#b683df" className="mx-auto mt-20" />
       )}
     </div>
   );

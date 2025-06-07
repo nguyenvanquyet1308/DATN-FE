@@ -14,16 +14,15 @@ export default function MarkdownEditor({
 
   return (
     <div className="flex flex-col ">
-      {errors[id] && (
+      {errors && errors[id] && (
         <small className="text-xs text-red-500 text-end">
           {errors[id].message}
         </small>
-      )}
+       )}
       <Editor
         apiKey={`${process.env.REACT_APP_TINY_MCE_KEY}`}
         onInit={(_evt, editor) => (editorRef.current = editor)}
         value={value}
-        {...register(id, validate)}
         init={{
           height,
           menubar: true,

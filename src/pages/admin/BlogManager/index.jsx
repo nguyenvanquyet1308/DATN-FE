@@ -1,61 +1,96 @@
-import { Modal, notification, Tooltip } from "antd";
+import React, { useEffect, useState } from "react";
+import { 
+  Modal, 
+  notification, 
+  Tooltip, 
+  Table, 
+  Space, 
+  Button, 
+  Card, 
+  Typography, 
+  Popconfirm, 
+  Image,
+  PageHeader
+} from "antd";
 import { deleteBlog, getBlog } from "apis/blog.api";
-import Button from "components/Button";
 import moment from "moment";
-import { useEffect, useState } from "react";
 import { useDispatch } from "react-redux";
 import { changeLoading } from "store/slicers/common.slicer";
-import Icons from "utils/icons";
+import { EditOutlined, DeleteOutlined, PlusOutlined } from "@ant-design/icons";
 import logo from "assets/images/logo.jpg";
 import BlogForm from "./BlogForm";
-import Pagination from "../components/Pagination";
+
+const { Title } = Typography;
 
 function BlogManager() {
   const dispatch = useDispatch();
 
-  const [limit, setLimit] = useState(10);
-  const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(0);
-  const [totalElements, setTotalElements] = useState(0);
-  const [Blog, setBlog] = useState([]);
+  const [pagination, setPagination] = useState({
+    current: 1,
+    pageSize: 10,
+    total: 0
+  });
+  const [blogs, setBlogs] = useState([]);
   const [editBlog, setEditBlog] = useState(null);
   const [isShowModal, setIsShowModal] = useState(false);
 
-  const fetchBlog = async () => {
+  const fetchBlogs = async (params = {}) => {
     dispatch(changeLoading());
     try {
-      const params = {
-        limit,
-        page,
+      const requestParams = {
+        limit: params.pageSize || pagination.pageSize,
+        page: params.current || pagination.current,
       };
-      const res = await getBlog(params);
-      setBlog(res?.result?.content);
-      setTotalPages(res?.result?.totalPages);
-      setTotalElements(res?.result?.totalElements);
+      
+      const res = await getBlog(requestParams);
+      
+      setBlogs(res?.result?.content || []);
+      setPagination({
+        ...pagination,
+        current: params.current || pagination.current,
+        pageSize: params.pageSize || pagination.pageSize,
+        total: res?.result?.totalElements || 0
+      });
     } catch (error) {
-      notification.error({ message: error?.message, duration: 2 });
+      notification.error({ 
+        message: "Lỗi khi tải dữ liệu",
+        description: error?.message,
+        duration: 2 
+      });
     }
     dispatch(changeLoading());
   };
-  useEffect(() => {
-    fetchBlog();
-  }, [page, limit]);
 
-  const openFormUpdate = (item) => {
-    setEditBlog(item);
+  useEffect(() => {
+    fetchBlogs();
+  }, []);
+
+  const handleTableChange = (newPagination) => {
+    fetchBlogs({
+      current: newPagination.current,
+      pageSize: newPagination.pageSize,
+    });
+  };
+
+  const openFormUpdate = (blog) => {
+    setEditBlog(blog);
     setIsShowModal(true);
   };
+
   const handleDelete = async (id) => {
     dispatch(changeLoading());
     try {
       await deleteBlog(id);
-      notification.success({ message: "Delete Successfully" });
-      fetchBlog();
+      notification.success({ 
+        message: "Xóa bài viết thành công",
+        duration: 2
+      });
+      fetchBlogs({ current: pagination.current, pageSize: pagination.pageSize });
     } catch (error) {
       const message =
-        error.code == 1009
-          ? "Sản phẩm ko tồn tại trong loại này"
-          : "Lỗi vui lòng thử lại...";
+        error.code === 1009
+          ? "Bài viết không tồn tại trong danh mục này"
+          : "Lỗi khi xóa bài viết, vui lòng thử lại...";
 
       notification.error({
         message,
@@ -65,129 +100,118 @@ function BlogManager() {
     dispatch(changeLoading());
   };
 
+  const columns = [
+    {
+      title: 'STT',
+      key: 'index',
+      width: 70,
+      render: (_, __, index) => (pagination.current - 1) * pagination.pageSize + index + 1,
+    },
+    {
+      title: 'Danh mục',
+      dataIndex: 'categoryBlogName',
+      key: 'categoryBlogName',
+      render: (text) => <span className="font-medium">{text}</span>,
+    },
+    {
+      title: 'Tiêu đề',
+      dataIndex: 'title',
+      key: 'title',
+      render: (text) => <span className="font-medium">{text}</span>,
+    },
+    {
+      title: 'Tác giả',
+      dataIndex: 'userName',
+      key: 'userName',
+    },
+    {
+      title: 'Ngày tạo',
+      dataIndex: 'createdAt',
+      key: 'createdAt',
+      render: (date) => date ? moment(date).format('DD/MM/YYYY') : 'N/A',
+    },
+    {
+      title: 'Thao tác',
+      key: 'action',
+      width: 200,
+      render: (_, record) => (
+        <Space size="small">
+          <Button
+            type="primary"
+            icon={<EditOutlined />}
+            onClick={() => openFormUpdate(record)}
+          >
+            Sửa
+          </Button>
+          <Popconfirm
+            title="Bạn có chắc chắn muốn xóa bài viết này?"
+            onConfirm={() => handleDelete(record.blogId)}
+            okText="Có"
+            cancelText="Không"
+          >
+            <Button
+              type="primary" 
+              danger
+              icon={<DeleteOutlined />}
+            >
+              Xóa
+            </Button>
+          </Popconfirm>
+        </Space>
+      ),
+    },
+  ];
+
   return (
-    <div className="w-full p-4 flex flex-col  overflow-auto min-h-full">
+    <Card className="blog-manager-container">
       <Modal
+        title={editBlog ? "Cập nhật bài viết" : "Thêm bài viết mới"}
         width={800}
         open={isShowModal}
         onCancel={() => setIsShowModal(false)}
-        footer={false}
+        footer={null}
+        destroyOnClose
       >
         <BlogForm
           closeModal={() => setIsShowModal(false)}
-          fetchData={fetchBlog}
+          fetchData={fetchBlogs}
           blogCurrent={editBlog}
         />
       </Modal>
-      <div className="h-[75px] flex gap-2 items-center justify-between p-2 border-b border-blue-300">
-        <div className="text-2xl font-bold flex justify-between items-center w-full ">
+
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
           <img
             src={logo}
             alt="logo"
-            className="w-16 object-contain"
-            data-aos="fade"
+            style={{ width: 50, height: 50, objectFit: 'contain' }}
           />
-          <div className="items-center" data-aos="fade">
-            CategoryBlog Manager
-          </div>
-          <Button
-            iconBefore={<Icons.FaPlus />}
-            name="Create"
-            handleClick={() => openFormUpdate()}
-            style={
-              "border rounded bg-green-600 cursor-pointer px-4 py-2 text-white text-sm"
-            }
-          />
+          <Title level={3} style={{ margin: 0 }}>Quản lý bài viết</Title>
         </div>
+        <Button 
+          type="primary" 
+          icon={<PlusOutlined />}
+          onClick={() => openFormUpdate()}
+        >
+          Thêm bài viết
+        </Button>
       </div>
 
-      <div className="flex flex-col border justify-between">
-        <table className="table-auto rounded p-2 bg-slate-50 mb-1 text-left w-full border-separate  transition-all duration-300 ease-in ">
-          <thead className="font-bold bg-light text-white text-[13px] text-center border border-blue-300">
-            <tr>
-              <th className="px-2 py-2">STT</th>
-              <th className="px-2 py-2">Category</th>
-              <th className="px-2 py-2">Title</th>
-              <th className="px-2 py-2">User</th>
-              <th className="px-2 py-2">Modified At</th>
-              <th className="px-2 py-2">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {Blog.map((item, index) => (
-              <Tooltip
-                title={
-                  item?.images ? (
-                    <img
-                      src={item?.images}
-                      alt={item?.name}
-                      className="w-[240px] h-auto rounded"
-                    />
-                  ) : (
-                    <span>No images available</span>
-                  )
-                }
-                placement="top"
-              >
-                <tr key={item.blogId} className="relative ">
-                  <td className="px-2 py-1 border border-slate-500 text-center text-lg font-bold">
-                    {index + 1}
-                  </td>
-                  <td className="px-2 py-1 border border-slate-500  text-lg font-bold">
-                    <span>{item?.categoryBlogName}</span>
-                  </td>
-                  <td className="px-2 py-1 border border-slate-500  text-lg font-bold">
-                    <span>{item?.title}</span>
-                  </td>
-                  <td className="px-2 py-1 border border-slate-500  text-lg font-bold">
-                    <span>{item?.userName}</span>
-                  </td>
-                  <td className="px-2 py-1 border border-slate-500 text-lg font-bold text-center">
-                    {item?.createdAt ? (
-                      <span>
-                        {moment(item?.createdAt).format("DD/MM/YYYY")}
-                      </span>
-                    ) : (
-                      <span>N/A</span>
-                    )}
-                  </td>
-
-                  <td className="px-2 py-1 border border-slate-500 text-lg font-bold text-center">
-                    <Button
-                      name={"Edit"}
-                      handleClick={() => openFormUpdate(item)}
-                      style={
-                        "border rounded bg-blue-600 cursor-pointer px-4 py-2 text-white text-sm"
-                      }
-                      iconBefore={<Icons.FaEdit />}
-                    />
-                    <Button
-                      name={"Delete"}
-                      style={
-                        "border rounded bg-red-600 cursor-pointer px-4 py-2 text-white text-sm"
-                      }
-                      handleClick={() => handleDelete(item?.blogId)}
-                      iconBefore={<Icons.MdDeleteForever />}
-                    />
-                  </td>
-                </tr>
-              </Tooltip>
-            ))}
-          </tbody>
-        </table>
-        <div class="flex w-full justify-end p-2 ">
-          <Pagination
-            listLimit={[10, 25, 40, 100]}
-            limitCurrent={limit}
-            setLimit={setLimit}
-            totalPages={totalPages}
-            setPage={setPage}
-            pageCurrent={page}
-            totalElements={totalElements}
-          />
-        </div>
-      </div>
-    </div>
+      <Table
+        columns={columns}
+        dataSource={blogs}
+        rowKey="blogId"
+        pagination={pagination}
+        onChange={handleTableChange}
+        bordered
+        scroll={{ x: 800 }}
+        onRow={(record) => ({
+          onMouseEnter: () => {
+            // Xử lý khi hover vào dòng nếu cần
+          }
+        })}
+      />
+    </Card>
   );
 }
 

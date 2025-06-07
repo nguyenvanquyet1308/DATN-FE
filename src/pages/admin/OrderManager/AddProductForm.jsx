@@ -1,17 +1,37 @@
-import Icons from "utils/icons";
-import logo from "assets/logo.png";
-import Button from "components/Button";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
+import { 
+  Input, 
+  notification, 
+  Card, 
+  Typography, 
+  Button, 
+  Space, 
+  Row, 
+  Col, 
+  Carousel, 
+  Tag, 
+  Rate, 
+  Badge, 
+  Divider, 
+  InputNumber,
+  Image 
+} from "antd";
+import { 
+  ShoppingCartOutlined, 
+  MinusOutlined, 
+  PlusOutlined, 
+  InfoCircleOutlined 
+} from "@ant-design/icons";
 import { fillUniqueATTSkus, formatCurrency } from "utils/helper";
-import ReactStars from "react-stars";
-import { Input, notification } from "antd";
-import Slider from "react-slick";
 import DOMPurify from "dompurify";
 import withBaseComponent from "hocs";
-import { useDispatch, useSelector } from "react-redux";
+import { useDispatch } from "react-redux";
 import { changeLoading } from "store/slicers/common.slicer";
 import { createOrderDetail } from "apis/order.api";
 import { useParams } from "react-router-dom";
+import logo from "assets/logo.png";
+
+const { Title, Text, Paragraph } = Typography;
 
 function AddProductForm({ data, checkLoginBeforeAction, closeModal }) {
   const [selectedATT, setSelectedATT] = useState({});
@@ -24,7 +44,6 @@ function AddProductForm({ data, checkLoginBeforeAction, closeModal }) {
   const dispatch = useDispatch();
 
   useEffect(() => {
-    let selectedPrice = price;
     let stockCal = data?.skus.reduce((acc, sku, index) => {
       const isMatch = Object.entries(selectedATT).every(([key, value]) => {
         return sku?.attributes[key] === value;
@@ -36,9 +55,9 @@ function AddProductForm({ data, checkLoginBeforeAction, closeModal }) {
       }
       return acc;
     }, 0);
-    setPrice(selectedPrice);
+    
     setStock(stockCal);
-  }, [selectedATT, price]);
+  }, [selectedATT, data?.skus]);
 
   useEffect(() => {
     if (data?.skus[0]?.attributes) {
@@ -47,8 +66,7 @@ function AddProductForm({ data, checkLoginBeforeAction, closeModal }) {
   }, [data]);
 
   const handleSelectAttSku = (key, value) => {
-    const att = { [key]: value };
-    setSelectedATT((prev) => ({ ...prev, ...att }));
+    setSelectedATT((prev) => ({ ...prev, [key]: value }));
   };
 
   const handleAddCart = async () => {
@@ -60,170 +78,229 @@ function AddProductForm({ data, checkLoginBeforeAction, closeModal }) {
       skuId: data.skus[selectedSku].id,
       price,
     };
+    
     try {
       await createOrderDetail(dataOrderDetail);
-      notification.success({ message: "Thêm sản phẩm vào order thành công!" });
+      notification.success({ 
+        message: "Thành công", 
+        description: "Đã thêm sản phẩm vào đơn hàng" 
+      });
+      closeModal();
     } catch (error) {
-      console.log(error);
+      notification.error({ 
+        message: "Lỗi", 
+        description: error.message || "Không thể thêm sản phẩm vào đơn hàng" 
+      });
     }
+    
     dispatch(changeLoading());
   };
 
-  const renderPanelRight = useMemo(
-    () => (
-      <div className="w-1/2 border bg-white rounded p-2 flex flex-col justify-between gap-2 ">
-        <p className="font-bold">
-          <span className="text-gray-500">Product : </span>
-          <span className="text-primary">{data.name}</span>
-        </p>
-        <p className="flex gap-2">
-          <ReactStars
-            value={data?.stars || 5}
-            color2="#E9C71B"
-            half={true}
-            edit={false}
-          />
-          {data?.totalSold > 0 && (
-            <span className="border-l text-gray-400 px-2 ">
-              {data?.totalSold}
-            </span>
-          )}
-
-          <span className="ml-auto text-blue-700 font-bold">
-            Còn lại {stock}
-          </span>
-        </p>
-        {fillUniqueATTSkus(data?.skus, "size").length > 2 && (
-          <div className="flex flex-col gap-2">
-            <span className="font-bold text-lg">Color : </span>
-            <div className="flex gap-2 ">
-              {fillUniqueATTSkus(data?.skus, "color").map((el, index) => (
-                <span
-                  onClick={() =>
-                    handleSelectAttSku("color", el.attributes.color)
-                  }
-                  key={index}
-                  className={`px-2 bg-slate-200 rounded cursor-pointer  ${
-                    selectedATT["color"] === el.attributes.color &&
-                    "shadow-md shadow-blue-700"
-                  } `}
-                >
-                  {el.attributes.color}
-                </span>
-              ))}
-            </div>
-          </div>
-        )}
-        {fillUniqueATTSkus(data?.skus, "size").length > 2 && (
-          <div className="flex flex-col gap-2">
-            <span className="font-bold text-lg">Size : </span>
-            <div className="flex gap-2 ">
-              {fillUniqueATTSkus(data?.skus, "size").map((el, index) => (
-                <span
-                  onClick={() => handleSelectAttSku("size", el.attributes.size)}
-                  key={index}
-                  className={`px-2 bg-slate-200 rounded cursor-pointer  ${
-                    selectedATT["size"] === el.attributes.size &&
-                    "shadow-md shadow-blue-700"
-                  } `}
-                >
-                  {el.attributes.size}
-                </span>
-              ))}
-            </div>
-          </div>
-        )}
-
-        <div className=" p-2 text-red-700 text-sm font-bold">
-          Tổng Tiền: {totalPrice ? formatCurrency(`${totalPrice}`) : "Liên hệ"}
-        </div>
-
-        <div className="flex gap-2 border p-2 rounded overflow-y-auto overflow-x-hidden flex-1 bg-slate-100">
-          <h1 className="text-primary font-bold text-nowrap">Mô tả : </h1>
-          <div
-            className="max-h-60 overflow-auto"
-            dangerouslySetInnerHTML={{
-              __html: DOMPurify.sanitize(data?.description),
-            }}
-          ></div>
-        </div>
-
-        <div className="bg-light p-1 rounded mt-auto ">
-          <div className="flex gap-2 bg-white px-2 py-1">
-            <span
-              className="px-1   border  border-primary rounded-full text-lg cursor-pointer select-none"
-              onClick={() => setQuantity((prev) => (prev > 1 ? --prev : prev))}
-            >
-              -
-            </span>
-            <Input
-              type="number"
-              value={quantity}
-              onChange={(e) => {
-                setQuantity(() => {
-                  let cal = parseInt(Math.abs(e.target.value) || 1);
-                  return cal > stock ? stock : cal;
-                });
-              }}
-            />
-            <span
-              className="px-1  border border-primary rounded-full text-lg cursor-pointer select-none "
-              onClick={() =>
-                setQuantity((prev) => (prev < stock ? ++prev : prev))
-              }
-            >
-              +
-            </span>
-          </div>
-        </div>
-
-        <button
-          onClick={() => checkLoginBeforeAction(() => handleAddCart())}
-          className="bg-primary rounded p-2 cursor-pointer text-lg font-bold text-white flex items-center justify-center"
-        >
-          <div>Thêm vào Order</div>
-          <Icons.FaCartPlus />
-        </button>
-      </div>
-    ),
-    [data?.skus, quantity, selectedATT, stock, selectedSku],
-  );
-
-  const settings = {
-    dots: true,
-    infinite: true,
-    slidesToShow: 1,
-    slidesToScroll: 1,
-    autoplay: true,
-    speed: 2000,
-    autoplaySpeed: 2000,
+  const handleIncreaseQuantity = () => {
+    setQuantity(prev => prev < stock ? prev + 1 : prev);
   };
 
+  const handleDecreaseQuantity = () => {
+    setQuantity(prev => prev > 1 ? prev - 1 : 1);
+  };
+
+  const handleQuantityChange = (value) => {
+    if (!value) {
+      setQuantity(1);
+      return;
+    }
+    
+    const newQuantity = parseInt(value);
+    if (isNaN(newQuantity)) {
+      return;
+    }
+    
+    setQuantity(newQuantity > stock ? stock : newQuantity);
+  };
+
+  // Xử lý hiển thị hình ảnh
+  const imageUrls = data?.skus[selectedSku]?.images?.split(",") || [];
+  
+  // Danh sách màu sắc và kích thước
+  const uniqueColors = fillUniqueATTSkus(data?.skus, "color");
+  const uniqueSizes = fillUniqueATTSkus(data?.skus, "size");
+
   return (
-    <div className="px-4 py-2 ">
-      <div className="bg-slate-100 p-2">
-        <div className="bg-light p-2 text-lg rounded text-white flex justify-between items-center">
-          <img src={logo} alt="Logo" className="h-8 w-8" />
-          <span className="text-center">Thêm vào order của bạn</span>
+    <Card>
+      <Space direction="vertical" size="large" style={{ width: '100%' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <Space>
+            <img src={logo} alt="Logo" style={{ height: 32 }} />
+            <Title level={4} style={{ margin: 0 }}>Thêm sản phẩm vào đơn hàng</Title>
+          </Space>
         </div>
-        <div className="flex gap-2 mt-2">
-          <div className="w-1/2 border bg-white rounded p-6">
-            {data?.skus[selectedSku]?.images?.split(",").length > 1 ? (
-              <Slider {...settings}>
-                {data?.skus[selectedSku]?.images
-                  ?.split(",")
-                  .map((img, index) => {
-                    return <img src={img} alt="img" key={index} />;
-                  })}
-              </Slider>
-            ) : (
-              <img src={data?.skus[selectedSku]?.images} alt="img" />
-            )}
-          </div>
-          {renderPanelRight}
-        </div>
-      </div>
-    </div>
+
+        <Row gutter={16}>
+          {/* Phần hình ảnh sản phẩm */}
+          <Col xs={24} sm={24} md={12}>
+            <Card bordered={false}>
+              {imageUrls.length > 1 ? (
+                <Carousel autoplay>
+                  {imageUrls.map((img, index) => (
+                    <div key={index}>
+                      <Image
+                        src={img}
+                        alt={`Product ${index + 1}`}
+                        style={{ width: '100%', height: '300px', objectFit: 'contain' }}
+                      />
+                    </div>
+                  ))}
+                </Carousel>
+              ) : (
+                <Image
+                  src={data?.skus[selectedSku]?.images}
+                  alt="Product"
+                  style={{ width: '100%', height: '300px', objectFit: 'contain' }}
+                />
+              )}
+            </Card>
+          </Col>
+
+          {/* Phần thông tin sản phẩm */}
+          <Col xs={24} sm={24} md={12}>
+            <Card bordered={false}>
+              <Space direction="vertical" size="middle" style={{ width: '100%' }}>
+                <Title level={4}>{data.name}</Title>
+                
+                <Space align="center">
+                  <Rate allowHalf defaultValue={data?.stars || 5} disabled />
+                  {data?.totalSold > 0 && (
+                    <Badge count={data?.totalSold} overflowCount={9999}>
+                      <Text type="secondary">Đã bán</Text>
+                    </Badge>
+                  )}
+                  <Text type="success" strong>
+                    Còn lại: {stock}
+                  </Text>
+                </Space>
+
+                {/* Màu sắc */}
+                {uniqueColors.length > 0 && (
+                  <div>
+                    <Text strong>Màu sắc:</Text>
+                    <div style={{ marginTop: 8 }}>
+                      <Space wrap>
+                        {uniqueColors.map((el, index) => (
+                          <Tag
+                            key={index}
+                            color={selectedATT["color"] === el.attributes.color ? "blue" : "default"}
+                            style={{ 
+                              cursor: 'pointer',
+                              padding: '4px 8px'
+                            }}
+                            onClick={() => handleSelectAttSku("color", el.attributes.color)}
+                          >
+                            {el.attributes.color}
+                          </Tag>
+                        ))}
+                      </Space>
+                    </div>
+                  </div>
+                )}
+
+                {/* Kích thước */}
+                {uniqueSizes.length > 0 && (
+                  <div>
+                    <Text strong>Kích thước:</Text>
+                    <div style={{ marginTop: 8 }}>
+                      <Space wrap>
+                        {uniqueSizes.map((el, index) => (
+                          <Tag
+                            key={index}
+                            color={selectedATT["size"] === el.attributes.size ? "blue" : "default"}
+                            style={{ 
+                              cursor: 'pointer',
+                              padding: '4px 8px'
+                            }}
+                            onClick={() => handleSelectAttSku("size", el.attributes.size)}
+                          >
+                            {el.attributes.size}
+                          </Tag>
+                        ))}
+                      </Space>
+                    </div>
+                  </div>
+                )}
+
+                <Divider />
+
+                {/* Mô tả sản phẩm */}
+                <div>
+                  <Text strong>
+                    <InfoCircleOutlined /> Mô tả sản phẩm
+                  </Text>
+                  <div 
+                    style={{ 
+                      maxHeight: '120px', 
+                      overflowY: 'auto',
+                      padding: '8px',
+                      marginTop: '8px',
+                      background: '#f5f5f5',
+                      borderRadius: '4px'
+                    }}
+                    dangerouslySetInnerHTML={{
+                      __html: DOMPurify.sanitize(data?.description || 'Không có mô tả'),
+                    }}
+                  />
+                </div>
+
+                <Divider />
+
+                {/* Số lượng và giá */}
+                <div>
+                  <Space direction="vertical" size="small" style={{ width: '100%' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <Text strong>Số lượng:</Text>
+                      <div style={{ display: 'flex', alignItems: 'center' }}>
+                        <Button 
+                          icon={<MinusOutlined />} 
+                          onClick={handleDecreaseQuantity}
+                          disabled={quantity <= 1}
+                        />
+                        <InputNumber
+                          min={1}
+                          max={stock}
+                          value={quantity}
+                          onChange={handleQuantityChange}
+                          style={{ width: '60px', margin: '0 8px' }}
+                        />
+                        <Button 
+                          icon={<PlusOutlined />} 
+                          onClick={handleIncreaseQuantity}
+                          disabled={quantity >= stock}
+                        />
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <Text strong>Tổng tiền:</Text>
+                      <Text style={{ fontSize: '18px', color: '#f5222d', fontWeight: 'bold' }}>
+                        {totalPrice ? formatCurrency(`${totalPrice}`) : "Liên hệ"} VNĐ
+                      </Text>
+                    </div>
+                  </Space>
+                </div>
+
+                <Button 
+                  type="primary" 
+                  icon={<ShoppingCartOutlined />} 
+                  size="large" 
+                  block
+                  onClick={() => checkLoginBeforeAction ? checkLoginBeforeAction(handleAddCart) : handleAddCart()}
+                >
+                  Thêm vào đơn hàng
+                </Button>
+              </Space>
+            </Card>
+          </Col>
+        </Row>
+      </Space>
+    </Card>
   );
 }
 

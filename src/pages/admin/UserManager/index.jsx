@@ -1,11 +1,22 @@
-import { Button, Input, Modal, notification, Select, Tooltip } from "antd";
-import { deleteCategoryBlog, getCategoryBlog } from "apis/categoryBlog.api";
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
+import { 
+  Button, 
+  Input, 
+  Modal, 
+  notification, 
+  Select, 
+  Tooltip, 
+  Card, 
+  Typography, 
+  Table, 
+  Space, 
+  Avatar, 
+  Tag,
+  Popconfirm
+} from "antd";
 import { useDispatch, useSelector } from "react-redux";
 import { changeLoading } from "store/slicers/common.slicer";
 import Icons from "utils/icons";
-import moment from "moment";
-import Pagination from "../components/Pagination";
 import logo from "assets/images/logo.jpg";
 import { deleteUsers, getUsers } from "apis/user.api";
 import { faker } from "@faker-js/faker";
@@ -13,14 +24,36 @@ import UserForm from "./UserForm";
 import useDebounce from "hooks/useDebounce";
 import { getRoles } from "apis/role.api";
 
+const { Title } = Typography;
+const { Option } = Select;
+const { Search } = Input;
+
+// Mapping trạng thái người dùng sang màu của Tag
+const STATUS_COLORS = {
+  ACTIVED: "success",
+  INACTIVE: "warning",
+  BLOCKED: "error"
+};
+
+// Mapping tên hiển thị cho trạng thái
+const STATUS_LABELS = {
+  ACTIVED: "Đã xác thực",
+  INACTIVE: "Chưa xác thực",
+  BLOCKED: "Đã khóa"
+};
+
 function UserManager() {
   const { userInfo } = useSelector((state) => state.auth);
   const dispatch = useDispatch();
 
-  const [limit, setLimit] = useState(10);
-  const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(0);
-  const [totalElements, setTotalElements] = useState(0);
+  const [tableParams, setTableParams] = useState({
+    pagination: {
+      current: 1,
+      pageSize: 10,
+      total: 0,
+    }
+  });
+  
   const [users, setUsers] = useState([]);
   const [editUser, setEditUser] = useState(null);
   const [isShowModal, setIsShowModal] = useState(false);
@@ -28,15 +61,18 @@ function UserManager() {
   const [roleOptions, setRoleOptions] = useState([]);
   const [roleFilter, setRoleFilter] = useState(null);
   const [keyword, setKeyword] = useState("");
+  const [loading, setLoading] = useState(false);
   const searchDebounce = useDebounce(keyword, 600);
 
   const fetchUsers = async () => {
-    dispatch(changeLoading());
+    setLoading(true);
     try {
+      const { current, pageSize } = tableParams.pagination;
       const params = {
-        limit,
-        page,
+        limit: pageSize,
+        page: current,
       };
+      
       if (searchDebounce) {
         params.keyword = searchDebounce;
       }
@@ -48,29 +84,62 @@ function UserManager() {
       }
 
       const res = await getUsers(params);
-      setUsers(res?.result?.content);
-      setTotalPages(res?.result?.totalPages);
-      setTotalElements(res?.result?.totalElements);
+      setUsers(res?.result?.content || []);
+      setTableParams({
+        ...tableParams,
+        pagination: {
+          ...tableParams.pagination,
+          total: res?.result?.totalElements || 0,
+        },
+      });
     } catch (error) {
       notification.error({
-        message: error?.message || "Something's went wrong...",
-        duration: 2,
+        message: "Lỗi khi tải danh sách người dùng",
+        description: error?.message || "Đã xảy ra lỗi, vui lòng thử lại sau",
+        duration: 3,
       });
+    } finally {
+      setLoading(false);
     }
-    dispatch(changeLoading());
   };
 
   useEffect(() => {
     const fetchRoles = async () => {
-      const res = await getRoles({ excludeFields: "users,modules" });
-      setRoleOptions(res?.result?.content);
+      try {
+        const res = await getRoles({ excludeFields: "users,modules" });
+        setRoleOptions(res?.result?.content || []);
+      } catch (error) {
+        notification.error({
+          message: "Lỗi khi tải vai trò",
+          description: error?.message || "Đã xảy ra lỗi, vui lòng thử lại sau",
+          duration: 3,
+        });
+      }
     };
     fetchRoles();
   }, []);
 
   useEffect(() => {
     fetchUsers();
-  }, [page, limit]);
+  }, [JSON.stringify(tableParams.pagination)]);
+
+  useEffect(() => {
+    setTableParams({
+      ...tableParams,
+      pagination: {
+        ...tableParams.pagination,
+        current: 1,
+      },
+    });
+    fetchUsers();
+  }, [searchDebounce, statusFilter, roleFilter]);
+
+  const handleTableChange = (pagination) => {
+    setTableParams({
+      ...tableParams,
+      pagination,
+    });
+  };
 
   const openFormUpdate = (item) => {
     setEditUser(item);
@@ -82,27 +151,113 @@ function UserManager() {
     try {
       await deleteUsers(id);
       notification.success({
-        message: "Delete Successfully",
-        duration: 1,
+        message: "Xóa người dùng thành công",
+        duration: 2,
       });
       fetchUsers();
     } catch (error) {
       notification.error({
-        message: error?.message,
-        duration: 2,
+        message: "Lỗi khi xóa người dùng",
+        description: error?.message || "Đã xảy ra lỗi, vui lòng thử lại sau",
+        duration: 3,
       });
+    } finally {
+      dispatch(changeLoading());
     }
-    dispatch(changeLoading());
   };
 
-  useEffect(() => {
-    setPage(1);
-    fetchUsers();
-  }, [searchDebounce, statusFilter, roleFilter]);
+  const columns = [
+    {
+      title: 'STT',
+      key: 'index',
+      width: 70,
+      render: (text, record, index) => (tableParams.pagination.current - 1) * tableParams.pagination.pageSize + index + 1,
+    },
+    {
+      title: 'Người dùng',
+      key: 'user',
+      render: (text, record) => (
+        <Space>
+          <Avatar 
+            src={record?.avatar || faker.image.avatar()} 
+            size="large"
+          />
+          <Space direction="vertical" size={0}>
+            <span style={{ fontWeight: 'bold' }}>
+              {record?.username || record?.email?.split("@")[0]}
+            </span>
+            <span>{record?.email}</span>
+          </Space>
+        </Space>
+      ),
+    },
+    {
+      title: 'Điểm',
+      dataIndex: 'points',
+      key: 'points',
+      width: 100,
+      render: (points) => (
+        <Tag color="blue">{points || 0}</Tag>
+      ),
+    },
+    {
+      title: 'Vai trò',
+      dataIndex: 'role',
+      key: 'role',
+      width: 120,
+      render: (role) => (
+        <Tag color="purple">{role?.split(" ")?.[0]?.slice(5) || 'N/A'}</Tag>
+      ),
+    },
+    {
+      title: 'Trạng thái',
+      dataIndex: 'status',
+      key: 'status',
+      width: 150,
+      render: (status) => (
+        <Tag color={STATUS_COLORS[status] || 'default'}>
+          {STATUS_LABELS[status] || status}
+        </Tag>
+      ),
+    },
+    {
+      title: 'Hành động',
+      key: 'action',
+      width: 150,
+      render: (_, record) => (
+        record.id !== userInfo.data?.id && (
+          <Space>
+            <Tooltip title="Chỉnh sửa">
+              <Button
+                type="primary"
+                icon={<Icons.FaEdit />}
+                onClick={() => openFormUpdate(record)}
+              />
+            </Tooltip>
+            <Popconfirm
+              title="Xóa người dùng"
+              description="Bạn có chắc chắn muốn xóa người dùng này?"
+              onConfirm={() => handleDelete(record.id)}
+              okText="Xóa"
+              cancelText="Hủy"
+              okButtonProps={{ danger: true }}
+            >
+              <Button
+                danger
+                type="primary"
+                icon={<Icons.MdDeleteForever />}
+              />
+            </Popconfirm>
+          </Space>
+        )
+      ),
+    },
+  ];
 
   return (
-    <div className="w-full p-4 flex flex-col  overflow-auto min-h-full">
+    <Card className="user-manager" style={{ margin: '16px' }}>
       <Modal
+        title="Thông tin người dùng"
         width={800}
         open={isShowModal}
         onCancel={() => setIsShowModal(false)}
@@ -118,158 +273,76 @@ function UserManager() {
           userCurrent={editUser}
         />
       </Modal>
-      <div className="h-[75px] flex gap-2 items-center justify-between p-2 border-b border-blue-300">
-        <div className="text-2xl font-bold flex justify-between items-center w-full ">
+
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+        <Space size="middle" align="center">
           <img
             src={logo}
             alt="logo"
-            className="w-16 object-contain"
-            data-aos="fade"
+            style={{ width: '60px', height: 'auto' }}
           />
-          <div className="items-center" data-aos="fade">
-            Quản lí người dùng
-          </div>
-          <Button onClick={() => openFormUpdate()}>
-            <div className="flex gap-2 items-center text-green-500 font-bold text-lg">
-              <span>Create</span>
-              <Icons.FaPlus />
-            </div>
-          </Button>
-        </div>
+          <Title level={3} style={{ margin: 0 }}>Quản lý người dùng</Title>
+        </Space>
+        
+        <Button
+          type="primary"
+          icon={<Icons.FaPlus />}
+          onClick={() => openFormUpdate()}
+        >
+          Tạo người dùng
+        </Button>
       </div>
 
-      {/* filter */}
-      <div className="flex gap-4 mb-4 justify-between items-center p-4 bg-white mt-2 rounded">
-        <div className="flex gap-2">
-          <Select
-            placeholder="Lọc qua vai trò"
-            value={roleFilter}
-            onChange={(value) => setRoleFilter(value)}
-            style={{ width: "200px" }}
+      <Card>
+        <Space style={{ width: '100%', justifyContent: 'space-between', marginBottom: '16px' }}>
+          <Space size="middle">
+            <Select
+              placeholder="Lọc theo vai trò"
+              value={roleFilter}
+              onChange={(value) => setRoleFilter(value)}
+              style={{ width: "200px" }}
+              allowClear
+            >
+              {roleOptions.map((role) => (
+                <Option key={role.id} value={role.id}>
+                  {role.name}
+                </Option>
+              ))}
+            </Select>
+            
+            <Select
+              placeholder="Lọc theo trạng thái"
+              value={statusFilter}
+              onChange={(value) => setStatusFilter(value)}
+              style={{ width: "200px" }}
+              allowClear
+            >
+              <Option value="ACTIVED">Đã xác thực</Option>
+              <Option value="INACTIVE">Chưa xác thực</Option>
+              <Option value="BLOCKED">Đã khóa</Option>
+            </Select>
+          </Space>
+          
+          <Search
+            placeholder="Tìm kiếm người dùng"
+            value={keyword}
+            onChange={(e) => setKeyword(e.target.value)}
+            style={{ width: 300 }}
             allowClear
-          >
-            {roleOptions.map((el) => (
-              <Select.Option value={el?.id}>{el.name}</Select.Option>
-            ))}
-          </Select>
-          <Select
-            placeholder="Lọc qua trạng thái"
-            value={statusFilter}
-            onChange={(value) => setStatusFilter(value)}
-            style={{ width: "200px" }}
-            allowClear
-          >
-            <Select.Option value="ACTIVED">Đã xác thực</Select.Option>
-            <Select.Option value="INACTIVE">Chưa xác thực</Select.Option>
-            <Select.Option value="BLOCKED">Đã Khóa</Select.Option>
-          </Select>
-        </div>
-        <Input
-          placeholder="Search by keyword"
-          value={keyword}
-          onChange={(e) => setKeyword(e.target.value)}
-          allowClear
-          addonAfter={<Icons.IoIosSearch />}
-          style={{ width: "300px" }}
+          />
+        </Space>
+
+        <Table
+          columns={columns}
+          dataSource={users}
+          rowKey="id"
+          pagination={tableParams.pagination}
+          loading={loading}
+          onChange={handleTableChange}
+          scroll={{ x: 800 }}
         />
-      </div>
-
-      {/* table */}
-      <div className="flex flex-col border justify-between">
-        <table className="table-auto rounded p-2  mb-1 text-left w-full border-separate  transition-all duration-300 ease-in ">
-          <thead className="font-bold  text-white text-[13px]  border border-blue-300">
-            <tr>
-              <th className="px-2 py-2 bg-gradient-to-r from-primary to-secondary">
-                STT
-              </th>
-              <th className="bg-gradient-to-r from-primary to-secondary px-2 py-2 text-center ">
-                Người dùng
-              </th>
-              <th className="bg-gradient-to-r from-primary to-secondary px-2 py-2">
-                Điểm
-              </th>
-              <th className="bg-gradient-to-r from-primary to-secondary px-2 py-2">
-                Vai Trò
-              </th>
-              <th className="bg-gradient-to-r from-primary to-secondary px-2 py-2">
-                Trạng thái
-              </th>
-              <th className="bg-gradient-to-r from-primary to-secondary px-2 py-2 text-center">
-                Hành động
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {users &&
-              users.map((item, index) => {
-                if (item.id != userInfo.data?.id)
-                  return (
-                    <tr
-                      key={item.id}
-                      className="relative border rounded my-2 bg-white"
-                    >
-                      <td className="px-2 py-1  border-slate-500 text-center text-lg font-bold">
-                        {index}
-                      </td>
-                      <td className="px-2 py-1  border-slate-500  ">
-                        <div className="flex flex-col px-2 justify-center gap-2">
-                          <div className="font-bold text-lg flex gap-2 items-center">
-                            <img
-                              className="w-8 h-8 rounded-full "
-                              src={item?.avatar || faker.image.avatar()}
-                              alt="item?.username"
-                            />
-                            {item?.username || item?.email.split("@")[0]}
-                          </div>
-                          <span>{item?.email}</span>
-                        </div>
-                      </td>
-                      <td className="px-2 py-1  border-slate-500 text-lg font-bold">
-                        {item?.points}
-                      </td>
-                      <td className="px-2 py-1  border-slate-500 text-lg font-bold">
-                        {item?.role.split(" ")[0].slice(5)}
-                      </td>
-                      <td className="px-2 py-1  border-slate-500 text-lg font-bold">
-                        {item?.status}
-                      </td>
-                      <td className="px-1 py-2 h-full flex  gap-4 items-center justify-center ">
-                        <Tooltip title="Chỉnh sửa">
-                          <Button
-                            onClick={() => openFormUpdate(item)}
-                            className="text-blue-500"
-                          >
-                            <Icons.FaEdit />
-                          </Button>
-                        </Tooltip>
-
-                        <Tooltip title="Xóa">
-                          <Button
-                            className="text-red-500"
-                            onClick={() => handleDelete(item?.id)}
-                          >
-                            <Icons.MdDeleteForever />
-                          </Button>
-                        </Tooltip>
-                      </td>
-                    </tr>
-                  );
-              })}
-          </tbody>
-        </table>
-        <div class="flex w-full justify-end p-2 ">
-          <Pagination
-            listLimit={[10, 25, 40, 100]}
-            limitCurrent={limit}
-            setLimit={setLimit}
-            totalPages={totalPages}
-            setPage={setPage}
-            pageCurrent={page}
-            totalElements={totalElements}
-          />
-        </div>
-      </div>
-    </div>
+      </Card>
+    </Card>
   );
 }
 

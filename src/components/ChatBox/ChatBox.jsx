@@ -69,27 +69,81 @@ const ChatBox = () => {
       sendMessage();
     }
   };
-  const renderTextWithLinks = (text) => {
+
+  const renderTextWithMarkdown = (text) => {
+    // Xử lý URL trước
     const urlRegex = /(https?:\/\/[^\s]+)/g;
-    const parts = text.split(urlRegex);
-    return parts.map((part, i) => {
-      if (urlRegex.test(part)) {
-        return (
-          <a
-            key={i}
-            href={part}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-blue-500 underline"
-          >
-            {part}
-          </a>
-        );
-      } else {
-        return part;
-      }
-    });
-  }
+    
+    // Tách văn bản thành các dòng
+    const lines = text.split('\n');
+    
+    return (
+      <div>
+        {lines.map((line, lineIndex) => {
+          // Kiểm tra xem dòng có phải là mục danh sách không (bắt đầu bằng * hoặc -)
+          const listItemMatch = line.match(/^(\s*[\*\-]\s+)(.+)$/);
+          
+          if (listItemMatch) {
+            // Đây là một mục danh sách
+            const [, bullet, content] = listItemMatch;
+            
+            // Xử lý nội dung để hỗ trợ link
+            const parts = content.split(urlRegex);
+            const contentWithLinks = parts.map((part, i) => {
+              if (urlRegex.test(part)) {
+                return (
+                  <a
+                    key={i}
+                    href={part}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-500 underline"
+                  >
+                    {part}
+                  </a>
+                );
+              } else {
+                return part;
+              }
+            });
+            
+            return (
+              <div key={lineIndex} className="flex mb-1">
+                <span className="mr-2">{bullet.trim()}</span>
+                <span>{contentWithLinks}</span>
+              </div>
+            );
+          } else {
+            // Đây là văn bản thông thường
+            const parts = line.split(urlRegex);
+            const lineWithLinks = parts.map((part, i) => {
+              if (urlRegex.test(part)) {
+                return (
+                  <a
+                    key={i}
+                    href={part}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-500 underline"
+                  >
+                    {part}
+                  </a>
+                );
+              } else {
+                return part;
+              }
+            });
+            
+            return (
+              <div key={lineIndex} className={lineIndex > 0 ? "mt-1" : ""}>
+                {lineWithLinks}
+              </div>
+            );
+          }
+        })}
+      </div>
+    );
+  };
 
   return (
     <div className="fixed bottom-5 right-5 z-50">
@@ -154,7 +208,7 @@ const ChatBox = () => {
                         : "bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white"
                     }`}
                   >
-                    {renderTextWithLinks(message.text)}
+                    {renderTextWithMarkdown(message.text)}
                   </div>
                 </div>
               ))

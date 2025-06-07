@@ -6,19 +6,27 @@ import {
   notification,
   Select,
   Tooltip,
+  Card,
+  Table,
+  Tag,
+  Space,
+  Typography,
+  Avatar,
+  Breadcrumb,
+  Row,
+  Col,
+  Divider,
 } from "antd";
-import { deleteCategoryBlog, getCategoryBlog } from "apis/categoryBlog.api";
 import { useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { changeLoading } from "store/slicers/common.slicer";
 import Icons from "utils/icons";
 import moment from "moment";
-import Pagination from "../components/Pagination";
+import Pagination from "pages/admin/components/Pagination";
 import logo from "assets/images/logo.jpg";
 import { deleteUsers, getUsers } from "apis/user.api";
 import { faker } from "@faker-js/faker";
 import useDebounce from "hooks/useDebounce";
-import { getRoles } from "apis/role.api";
 import {
   changeRentalRentedStatus,
   changeRentalStatus,
@@ -29,6 +37,9 @@ import { convertVI } from "utils/covertDataUI";
 import { generatePath, useNavigate } from "react-router-dom";
 import paths from "constant/paths";
 import { HashLoader } from "react-spinners";
+
+const { Title, Text } = Typography;
+const { RangePicker } = DatePicker;
 
 function RentalManager() {
   const { userInfo } = useSelector((state) => state.auth);
@@ -42,7 +53,6 @@ function RentalManager() {
   const [isLoading, setIsLoading] = useState(false);
   const [statusFilter, setStatusFilter] = useState(null);
   const [editUser, setEditUser] = useState(null);
-  const [isShowModal, setIsShowModal] = useState(false);
   const [keyword, setKeyword] = useState("");
   const searchDebounce = useDebounce(keyword, 600);
   const [startDate, setStartDate] = useState(null);
@@ -153,8 +163,10 @@ function RentalManager() {
       return (
         <Tooltip title="Xác nhận ngay">
           <Button
-            className=" text-orange-700 font-bold"
+            type="primary"
+            className="bg-orange-500 hover:bg-orange-600"
             onClick={() => handleConfirmOrder(id)}
+            size="middle"
           >
             Đang chờ xác nhận
           </Button>
@@ -166,8 +178,10 @@ function RentalManager() {
       return (
         <Tooltip title="Xác nhận đã giao">
           <Button
-            className=" text-green-700 font-bold"
+            type="primary"
+            className="bg-green-600 hover:bg-green-700"
             onClick={() => handleConfirmRented(id)}
+            size="middle"
           >
             Xác nhận đã giao
           </Button>
@@ -175,210 +189,233 @@ function RentalManager() {
       );
     }
     if (convertedStatus === "Chưa thanh toán")
-      return <span className="text-orange-500">{convertedStatus}</span>;
+      return <Tag color="orange">{convertedStatus}</Tag>;
 
     if (convertedStatus === "Đã hủy")
-      return <span className="text-red-500">{convertedStatus}</span>;
+      return <Tag color="red">{convertedStatus}</Tag>;
 
     if (convertedStatus === "Hết hạn")
-      return <span className="text-gray-500">{convertedStatus}</span>;
+      return <Tag color="default">{convertedStatus}</Tag>;
 
-    return <span className="text-primary">{convertedStatus}</span>;
+    return <Tag color="blue">{convertedStatus}</Tag>;
+  };
+
+  const columns = [
+    {
+      title: 'STT',
+      key: 'index',
+      width: 60,
+      render: (_, __, index) => index + 1,
+      align: 'center',
+    },
+    {
+      title: 'Mã đơn',
+      dataIndex: 'rentalCode',
+      key: 'rentalCode',
+      render: (text) => <span className="font-medium">#{text}</span>,
+    },
+    {
+      title: 'Người dùng',
+      dataIndex: 'user',
+      key: 'user',
+      render: (user) => (
+        <Space>
+          <Avatar src={user?.avatar || faker.image.avatar()} />
+          <div className="flex flex-col">
+            <Text strong>{user?.username || user?.email?.split("@")[0]}</Text>
+            <Text type="secondary" className="text-xs">{user?.email}</Text>
+          </div>
+        </Space>
+      ),
+    },
+    {
+      title: 'Tổng tiền',
+      dataIndex: 'totalAmount',
+      key: 'totalAmount',
+      render: (amount) => <Text strong>{formatMoney(amount)}đ</Text>,
+    },
+    {
+      title: 'Phương thức thanh toán',
+      dataIndex: 'payment',
+      key: 'payment',
+      render: (payment) => <span>{payment?.method}</span>,
+    },
+    {
+      title: 'Số lượng SP',
+      dataIndex: 'rentalDetails',
+      key: 'rentalDetails',
+      render: (details) => <span>Thuê {details.length} sản phẩm</span>,
+    },
+    {
+      title: 'Ngày tạo',
+      dataIndex: 'startAt',
+      key: 'startAt',
+      render: (date) => <span>{moment(date).format("DD/MM/YYYY HH:mm:ss")}</span>,
+    },
+    {
+      title: 'Trạng thái',
+      key: 'status',
+      dataIndex: 'status',
+      render: (status, record) => renderStatus(status, record.id),
+      align: 'center',
+    },
+    {
+      title: 'Hành động',
+      key: 'action',
+      render: (_, record) => (
+        <Space size="small">
+          <Button
+            type="primary"
+            icon={<Icons.FaEdit />}
+            className="bg-blue-500 hover:bg-blue-600"
+            size="middle"
+            onClick={() => navigate(generatePath(paths.ADMIN.EDIT_RENTAL_MANAGEMENT, { id: record.id }))}
+            title="Chỉnh sửa"
+          />
+          <Button
+            type="primary"
+            icon={<Icons.FaEye />}
+            className="bg-cyan-500 hover:bg-cyan-600"
+            size="middle"
+            onClick={() => navigate(generatePath(paths.ADMIN.RENTAL_DETAIL_MANAGEMENT, { rentalId: record.id }))}
+            title="Xem chi tiết"
+          />
+          <Button
+            type="primary"
+            danger
+            icon={<Icons.MdDeleteForever />}
+            size="middle"
+            onClick={() => handleDelete(record.id)}
+            title="Xóa"
+          />
+        </Space>
+      ),
+      align: 'center',
+      width: 180,
+    },
+  ];
+
+  const statusOptions = [
+    { value: "PENDING", label: "Đang xử lí" },
+    { value: "RENTED", label: "Đang thuê" },
+    { value: "SHIPPED", label: "Đang ship" },
+    { value: "RETURNED", label: "Đang trả" },
+    { value: "CANCELLED", label: "Đã hủy" },
+    { value: "UNPAID", label: "Chưa thanh toán" },
+  ];
+
+  const handleDateChange = (dates) => {
+    if (dates) {
+      setStartDate(dates[0]);
+      setEndDate(dates[1]);
+    } else {
+      setStartDate(null);
+      setEndDate(null);
+    }
   };
 
   return (
-    <div className="w-full p-4 flex flex-col  overflow-auto min-h-full">
-      <div className="h-[75px] flex gap-2 items-center justify-between p-2 border-b border-blue-300">
-        <div className="text-2xl font-bold flex justify-between items-center w-full ">
-          <img
-            src={logo}
-            alt="logo"
-            className="w-16 object-contain"
-            data-aos="fade"
-          />
-          <div className="items-center" data-aos="fade">
-            Quản lí đơn thuê
+    <div className="p-6 bg-gray-50 min-h-screen">
+      <Card className="shadow-sm mb-6 overflow-hidden">
+        <div className="flex justify-between items-center">
+          <div>
+            <div className="flex items-center gap-4 mb-2">
+              <img
+                src={logo}
+                alt="logo"
+                className="w-12 h-12 object-contain rounded-md"
+              />
+              <div>
+                <Breadcrumb
+                  items={[
+                    { title: 'Admin' },
+                    { title: 'Quản lí đơn thuê' }
+                  ]}
+                  className="mb-1"
+                />
+                <Title level={3} className="m-0">Quản lí đơn thuê</Title>
+              </div>
+            </div>
           </div>
           <Button
+            type="primary"
+            icon={<Icons.FaPlus />}
+            size="large"
+            className="bg-green-500 hover:bg-green-600"
             onClick={() => navigate(paths.ADMIN.UPDATE_RENTAL_MANAGEMENT)}
           >
-            <div className="flex gap-2 items-center text-green-500 font-bold text-lg">
-              <span>Tạo</span>
-              <Icons.FaPlus />
-            </div>
+            Tạo đơn thuê
           </Button>
         </div>
-      </div>
+      </Card>
 
-      {/* filter */}
-      <div className="flex gap-4 mb-4 justify-between items-center p-4 bg-white mt-2 rounded">
-        <div className="flex gap-2">
-          <div className="flex gap-2 items-center">
-            <p>Trạng thái </p>
-            <Select
-              placeholder="Lọc trạng thái"
-              value={statusFilter}
-              onChange={(value) => setStatusFilter(value)}
-              style={{ width: "200px" }}
-              allowClear
-            >
-              <Select.Option value="PENDING">Đang xử lí</Select.Option>
-              <Select.Option value="RENTED">Đang thuê</Select.Option>
-              <Select.Option value="RENTED">Đang ship</Select.Option>
-              <Select.Option value="RETURNED">Đang trả</Select.Option>
-              <Select.Option value="CANCELLED">Đã hủy</Select.Option>
-              <Select.Option value="UNPAID">Chưa thanh toán</Select.Option>
-            </Select>
-          </div>
-
-          <div className="flex gap-2 items-center">
-            <p>Từ </p>
-            <DatePicker
-              value={startDate}
-              placeholder="chọn ngày"
-              onChange={(date) => setStartDate(date)}
-            />
-          </div>
-          <div className="flex gap-2 items-center">
-            <p>Đến </p>
-            <DatePicker
-              placeholder="chọn ngày"
-              value={endDate}
-              onChange={(date) => setEndDate(date)}
-            />
-          </div>
+      <Card className="shadow-sm mb-6" title="Bộ lọc">
+        <div className="flex flex-col md:flex-row gap-4 justify-between items-center">
+          <Space wrap className="w-full">
+            <div className="flex items-center gap-2">
+              <Text strong>Trạng thái:</Text>
+              <Select
+                placeholder="Lọc trạng thái"
+                value={statusFilter}
+                onChange={(value) => setStatusFilter(value)}
+                style={{ width: "180px" }}
+                allowClear
+                options={statusOptions}
+                className="min-w-[180px]"
+              />
+            </div>
+            
+            <div className="flex items-center gap-2">
+              <Text strong>Thời gian:</Text>
+              <RangePicker
+                value={startDate && endDate ? [startDate, endDate] : null}
+                onChange={handleDateChange}
+                format="DD/MM/YYYY"
+                placeholder={['Từ ngày', 'Đến ngày']}
+              />
+            </div>
+          </Space>
+          
+          <Input.Search
+            placeholder="Tìm kiếm (mã đơn, người dùng, sản phẩm)"
+            value={keyword}
+            onChange={(e) => setKeyword(e.target.value)}
+            allowClear
+            enterButton={<Icons.IoIosSearch />}
+            style={{ maxWidth: "350px" }}
+            className="w-full md:w-auto"
+            size="middle"
+          />
         </div>
-        <Input
-          placeholder="Tìm kiếm từ khóa (code, user, product)"
-          value={keyword}
-          onChange={(e) => setKeyword(e.target.value)}
-          allowClear
-          addonAfter={<Icons.IoIosSearch />}
-          style={{ width: "300px" }}
-        />
-      </div>
+      </Card>
 
       {isLoading ? (
-        <HashLoader size={100} color="#b683df" className="mx-auto mt-20" />
+        <div className="flex justify-center items-center h-64">
+          <HashLoader size={60} color="#00ADB5" />
+        </div>
       ) : (
-        <div className="flex flex-col border justify-between">
-          <table className="table-auto rounded p-2  mb-1 text-left w-full border-separate  transition-all duration-300 ease-in ">
-            <thead className="font-bold  text-white text-[13px]  border border-blue-300">
-              <tr>
-                <th className="px-2 py-2 bg-gradient-to-r from-primary to-secondary">
-                  STT
-                </th>
-                <th className="bg-gradient-to-r from-primary to-secondary px-2 py-2  ">
-                  Mã đơn
-                </th>
-                <th className="bg-gradient-to-r from-primary to-secondary px-2 py-2">
-                  Người dùng
-                </th>
-                <th className="bg-gradient-to-r from-primary to-secondary px-2 py-2">
-                  Tổng tiền
-                </th>
-                <th className="bg-gradient-to-r from-primary to-secondary px-2 py-2">
-                  Phương thức thanh toán
-                </th>
-                <th className="bg-gradient-to-r from-primary to-secondary px-2 py-2">
-                  Số lượng SP
-                </th>
-                <th className="bg-gradient-to-r from-primary to-secondary px-2 py-2">
-                  Ngày tạo
-                </th>
-                <th className="bg-gradient-to-r from-primary to-secondary px-2 py-2">
-                  Trạng thái
-                </th>
-                <th className="bg-gradient-to-r from-primary to-secondary px-2 py-2 text-center">
-                  Hành động
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {rentals.map((item, index) => (
-                <tr
-                  key={item.id}
-                  className="relative border rounded my-2 bg-white"
-                >
-                  <td className="px-2 py-1  border-slate-500 text-center text-lg font-bold">
-                    {index}
-                  </td>
-                  <td className="px-2 py-1  border-slate-500 text-lg font-bold">
-                    #{item?.rentalCode}
-                  </td>
-                  <td className="px-2 py-1  border-slate-500  ">
-                    <div className="flex flex-col px-2 justify-center gap-2">
-                      <div className="font-bold text-lg flex gap-2 items-center">
-                        <img
-                          className="w-8 h-8 rounded-full "
-                          src={item?.user?.avatar || faker.image.avatar()}
-                          alt={item?.user?.avatar}
-                        />
-                        {item?.user?.username ||
-                          item?.user?.email.split("@")[0]}
-                      </div>
-                      <span>{item?.user?.email}</span>
-                    </div>
-                  </td>
-                  <td className="px-2 py-1  border-slate-500 text-lg font-bold">
-                    {formatMoney(item?.totalAmount)}đ
-                  </td>
-                  <td className="px-2 py-1  border-slate-500 text-lg font-bold">
-                    {item?.payment?.method}
-                  </td>
-                  <td className="px-2 py-1  border-slate-500 text-lg font-bold">
-                    Thuê {item?.rentalDetails.length} sản phẩm
-                  </td>
-                  <td className="px-2 py-1  border-slate-500 text-lg font-bold">
-                    {moment(item?.startAt).format("DD/MM/YYYY hh:mm:ss")}
-                  </td>
-                  <td className="px-2 py-1  border-slate-500 text-lg font-bold text-center">
-                    <td className="p-2">
-                      {renderStatus(item?.status, item.id)}
-                    </td>
-                  </td>
-                  <td className="px-1 py-2 h-full flex  gap-4 items-center justify-center ">
-                    <Tooltip title="Chỉnh sửa">
-                      <Button
-                        onClick={() =>
-                          navigate(
-                            generatePath(paths.ADMIN.EDIT_RENTAL_MANAGEMENT, {
-                              id: item.id,
-                            }),
-                          )
-                        }
-                      >
-                        <Icons.FaEdit color="blue" />
-                      </Button>
-                    </Tooltip>
-                    <Tooltip title="Xem chi tiết">
-                      <Button
-                        onClick={() =>
-                          navigate(
-                            generatePath(paths.ADMIN.RENTAL_DETAIL_MANAGEMENT, {
-                              rentalId: item.id,
-                            }),
-                          )
-                        }
-                      >
-                        <Icons.FaEye />
-                      </Button>
-                    </Tooltip>
-                    <Tooltip title="Xóa">
-                      <Button
-                        className="text-red-500"
-                        onClick={() => handleDelete(item?.id)}
-                      >
-                        <Icons.MdDeleteForever />
-                      </Button>
-                    </Tooltip>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <Card className="shadow-sm">
+          <Table
+            dataSource={rentals}
+            columns={columns}
+            rowKey="id"
+            pagination={false}
+            className="overflow-x-auto"
+            size="middle"
+            bordered
+            rowClassName="hover:bg-gray-50 transition-colors"
+            locale={{
+              emptyText: (
+                <div className="py-8 text-center">
+                  <Icons.FaBoxOpen size={40} className="mx-auto text-gray-300 mb-2" />
+                  <Text type="secondary">Không có đơn hàng nào</Text>
+                </div>
+              )
+            }}
+          />
+          
           {rentals.length > 1 && (
-            <div class="flex w-full justify-end p-2 ">
+            <div className="flex justify-end mt-4">
               <Pagination
                 listLimit={[10, 25, 40, 100]}
                 limitCurrent={limit}
@@ -390,7 +427,7 @@ function RentalManager() {
               />
             </div>
           )}
-        </div>
+        </Card>
       )}
     </div>
   );

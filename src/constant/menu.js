@@ -9,13 +9,13 @@ export const menuAdminSidebar = [
     icon: <ICONS.AiFillDashboard />,
   },
   {
-    id: 1,
+    id: 2,
     text: "Khuyến Mãi",
     path: paths.ADMIN.VOUCHER_MANAGEMENT,
     icon: <ICONS.BiSolidDiscount />,
   },
   {
-    id: 2,
+    id: 3,
     text: "Quản lí người dùng",
     icon: <ICONS.FaUsersGear />,
     submenu: [
@@ -32,7 +32,7 @@ export const menuAdminSidebar = [
     ],
   },
   {
-    id: 3,
+    id: 4,
     text: "Quản lí sản phẩm",
     icon: <ICONS.RiProductHuntLine />,
     submenu: [
@@ -59,7 +59,7 @@ export const menuAdminSidebar = [
     ],
   },
   {
-    id: 4,
+    id: 5,
     text: "Quản lí bài viết",
     icon: <ICONS.FaBlog />,
     submenu: [
@@ -81,7 +81,7 @@ export const menuAdminSidebar = [
     ],
   },
   {
-    id: 5,
+    id: 6,
     text: "Quản lí đơn hàng",
     icon: <ICONS.TbPackages />,
     submenu: [
@@ -98,7 +98,7 @@ export const menuAdminSidebar = [
     ],
   },
   {
-    id: 5,
+    id: 7,
     text: "Quản lí đơn thuê",
     icon: <ICONS.FaBusinessTime />,
     submenu: [
@@ -108,14 +108,14 @@ export const menuAdminSidebar = [
         path: paths.ADMIN.RENTAL_MANAGEMENT,
       },
       {
-        id: 1,
+        id: 2,
         text: "Tạo nhanh ",
         path: paths.ADMIN.UPDATE_RENTAL_MANAGEMENT,
       },
     ],
   },
   {
-    id: 5,
+    id: 8,
     text: "Thống kê",
     icon: <ICONS.FaClipboardList />,
     submenu: [
@@ -151,25 +151,25 @@ export const menuProfileSidebar = [
     icon: <ICONS.FaUser />,
   },
   {
-    id: 1,
+    id: 2,
     text: "Sổ địa chỉ",
     path: paths.MEMBER.ADDRESS_ACCOUNT,
     icon: <ICONS.GiPositionMarker />,
   },
   {
-    id: 1,
+    id: 3,
     text: "Đơn mua",
     path: paths.MEMBER.ORDER_HISTORY,
     icon: <ICONS.FaBorderAll />,
   },
   {
-    id: 1,
+    id: 4,
     text: "Đơn thuê",
     path: paths.MEMBER.RENTAL_HISTORY,
     icon: <ICONS.FaBusinessTime />,
   },
   {
-    id: 1,
+    id: 5,
     text: "Đổi mật khẩu",
     path: paths.MEMBER.CHANGE_PASSWORD,
     icon: <ICONS.TbPasswordUser />,

@@ -1,63 +1,98 @@
-import { faker } from "@faker-js/faker";
-import { Button, notification, Tooltip } from "antd";
-import { getRoles } from "apis/role.api";
-import { deleteUsers, getUsers } from "apis/user.api";
-import logo from "assets/images/logo.jpg";
+import React, { useEffect, useState } from "react";
+import { 
+  Button, 
+  notification, 
+  Tooltip, 
+  Card, 
+  Typography, 
+  Table, 
+  Space, 
+  Input, 
+  Tag, 
+  Popconfirm,
+  Row,
+  Col
+} from "antd";
+import { deleteVoucher, getVouchers } from "apis/voucher.api";
 import useDebounce from "hooks/useDebounce";
-import { useEffect, useState } from "react";
-import { useDispatch, useSelector } from "react-redux";
+import { useSelector } from "react-redux";
 import { changeLoading } from "store/slicers/common.slicer";
 import Icons from "utils/icons";
-import Pagination from "../components/Pagination";
-import { deleteVoucher, getVouchers } from "apis/voucher.api";
 import moment from "moment";
 import { formatMoney } from "utils/helper";
 import withBaseComponent from "hocs";
 import paths from "constant/paths";
 import { generatePath } from "react-router-dom";
+import logo from "assets/images/logo.jpg";
+
+const { Title, Text } = Typography;
+const { Search } = Input;
 
 function VoucherManager({ dispatch, navigate }) {
   const { userInfo } = useSelector((state) => state.auth);
-  const [limit, setLimit] = useState(10);
-  const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(0);
-  const [totalElements, setTotalElements] = useState(0);
+  const [tableParams, setTableParams] = useState({
+    pagination: {
+      current: 1,
+      pageSize: 10,
+      total: 0,
+    }
+  });
   const [vouchers, setVouchers] = useState([]);
-  console.log("🚀 ~ VoucherManager ~ vouchers:", vouchers);
-  const [isShowModal, setIsShowModal] = useState(false);
   const [keyword, setKeyword] = useState("");
   const searchDebounce = useDebounce(keyword, 600);
+  const [loading, setLoading] = useState(false);
 
   const fetchVouchers = async () => {
-    dispatch(changeLoading());
+    setLoading(true);
     try {
+      const { current, pageSize } = tableParams.pagination;
       const params = {
-        limit,
-        page,
+        limit: pageSize,
+        page: current,
       };
       if (searchDebounce) {
         params.keyword = searchDebounce;
       }
 
       const res = await getVouchers(params);
-      setVouchers(res?.result?.content);
-      setTotalPages(res?.result?.totalPages);
-      setTotalElements(res?.result?.totalElements);
+      setVouchers(res?.result?.content || []);
+      setTableParams({
+        ...tableParams,
+        pagination: {
+          ...tableParams.pagination,
+          total: res?.result?.totalElements || 0,
+        },
+      });
     } catch (error) {
       notification.error({
-        message: error?.message || "Something's went wrong...",
+        message: error?.message || "Đã xảy ra lỗi khi tải danh sách khuyến mãi",
         duration: 2,
       });
+    } finally {
+      setLoading(false);
     }
-    dispatch(changeLoading());
   };
 
   useEffect(() => {
     fetchVouchers();
-  }, [page, limit]);
+  }, [JSON.stringify(tableParams.pagination)]);
 
-  const openFormUpdate = (item) => {
-    setIsShowModal(true);
+  useEffect(() => {
+    setTableParams({
+      ...tableParams,
+      pagination: {
+        ...tableParams.pagination,
+        current: 1,
+      },
+    });
+    fetchVouchers();
+  }, [searchDebounce]);
+
+  const handleTableChange = (pagination) => {
+    setTableParams({
+      ...tableParams,
+      pagination,
+    });
   };
 
   const handleDelete = async (id) => {
@@ -65,180 +100,189 @@ function VoucherManager({ dispatch, navigate }) {
     try {
       await deleteVoucher(id);
       notification.success({
-        message: "Delete Successfully",
+        message: "Xóa khuyến mãi thành công",
         duration: 1,
       });
       fetchVouchers();
     } catch (error) {
       notification.error({
-        message: error?.message,
+        message: error?.message || "Lỗi khi xóa khuyến mãi",
         duration: 2,
       });
     }
     dispatch(changeLoading());
   };
 
-  useEffect(() => {
-    setPage(1);
-    fetchVouchers();
-  }, [searchDebounce]);
+  const columns = [
+    {
+      title: 'STT',
+      key: 'index',
+      width: 70,
+      render: (text, record, index) => (tableParams.pagination.current - 1) * tableParams.pagination.pageSize + index + 1,
+    },
+    {
+      title: 'Tên',
+      dataIndex: 'name',
+      key: 'name',
+      render: (text) => <Text strong>{text}</Text>
+    },
+    {
+      title: 'Loại',
+      dataIndex: 'voucher_category',
+      key: 'voucher_category',
+      render: (category) => {
+        let color = 'blue';
+        let text = category;
+        
+        if (category === 'PRODUCT') {
+          color = 'green';
+          text = 'Sản phẩm';
+        } else if (category === 'SHIPPING') {
+          color = 'orange';
+          text = 'Phí ship';
+        } else if (category === 'RENTAL') {
+          color = 'purple';
+          text = 'Thuê';
+        }
+        
+        return <Tag color={color}>{text}</Tag>
+      }
+    },
+    {
+      title: 'Mã',
+      dataIndex: 'code',
+      key: 'code',
+      render: (code) => <Tag color="blue">{code}</Tag>
+    },
+    {
+      title: 'Kiểu giảm',
+      dataIndex: 'discount_type',
+      key: 'discount_type',
+      render: (type) => <Tag color={type === 'FIXED' ? 'volcano' : 'geekblue'}>{type === 'FIXED' ? 'Cố định' : 'Phần trăm'}</Tag>
+    },
+    {
+      title: 'Giá trị giảm',
+      key: 'value',
+      render: (_, record) => (
+        <Text strong>
+          {record.discount_type === "FIXED"
+            ? formatMoney(record.value) + "đ"
+            : record.value + "%"}
+        </Text>
+      )
+    },
+    {
+      title: 'Giảm tối đa',
+      dataIndex: 'max_discount',
+      key: 'max_discount',
+      render: (value) => value ? formatMoney(value) + 'đ' : '-'
+    },
+    {
+      title: 'Đơn tối thiểu',
+      dataIndex: 'min_order',
+      key: 'min_order',
+      render: (value) => value ? formatMoney(value) + 'đ' : '-'
+    },
+    {
+      title: 'Ngày hết hạn',
+      dataIndex: 'expiry_date',
+      key: 'expiry_date',
+      render: (date) => moment(date).format("DD-MM-YYYY")
+    },
+    {
+      title: 'Giới hạn dùng',
+      dataIndex: 'usage_limit',
+      key: 'usage_limit',
+    },
+    {
+      title: 'Đã dùng',
+      dataIndex: 'usageCount',
+      key: 'usageCount',
+    },
+    {
+      title: 'Trạng thái',
+      dataIndex: 'isPublic',
+      key: 'isPublic',
+      render: (isPublic) => (
+        <Tag color={isPublic ? 'success' : 'default'}>
+          {isPublic ? 'Bật' : 'Tắt'}
+        </Tag>
+      )
+    },
+    {
+      title: 'Hành động',
+      key: 'action',
+      width: 120,
+      render: (_, record) => (
+        <Space>
+          <Tooltip title="Chỉnh sửa">
+            <Button
+              type="primary"
+              icon={<Icons.FaEdit />}
+              onClick={() => navigate(generatePath(paths.ADMIN.UPDATE_VOUCHER, { id: record.id }))}
+            />
+          </Tooltip>
+          <Popconfirm
+            title="Xóa khuyến mãi"
+            description="Bạn có chắc chắn muốn xóa khuyến mãi này?"
+            onConfirm={() => handleDelete(record.id)}
+            okText="Xóa"
+            cancelText="Hủy"
+            okButtonProps={{ danger: true }}
+          >
+            <Button danger type="primary" icon={<Icons.MdDeleteForever />} />
+          </Popconfirm>
+        </Space>
+      ),
+    },
+  ];
 
   return (
-    <div className="w-full p-4 flex flex-col  overflow-auto min-h-full">
-      <div className="h-[75px] flex gap-2 items-center justify-between p-2 border-b border-blue-300">
-        <div className="text-2xl font-bold flex justify-between items-center w-full ">
+    <Card className="voucher-manager" style={{ margin: '16px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+        <Space size="middle" align="center">
           <img
             src={logo}
             alt="logo"
-            className="w-16 object-contain"
-            data-aos="fade"
+            style={{ width: '60px', height: 'auto' }}
           />
-          <div className="items-center" data-aos="fade">
-            Quản lí khuyến mãi
-          </div>
-          <Button onClick={() => navigate(paths.ADMIN.CREATE_VOUCHER)}>
-            <div className="flex gap-2 items-center text-green-500 font-bold text-lg">
-              <span>Create</span>
-              <Icons.FaPlus />
-            </div>
-          </Button>
-        </div>
+          <Title level={3} style={{ margin: 0 }}>Quản lý khuyến mãi</Title>
+        </Space>
+        
+        <Button
+          type="primary"
+          icon={<Icons.FaPlus />}
+          onClick={() => navigate(paths.ADMIN.CREATE_VOUCHER)}
+        >
+          Tạo khuyến mãi
+        </Button>
       </div>
 
-      {/* table */}
-      <div className="flex flex-col border justify-between">
-        <table className="table-auto rounded p-2  mb-1 text-left w-full border-separate  transition-all duration-300 ease-in ">
-          <thead className="font-bold  text-white text-[13px]  border border-blue-300">
-            <tr>
-              <th className="px-2 py-2 bg-gradient-to-r from-primary to-secondary">
-                STT
-              </th>
-              <th className="px-2 py-2 text-center bg-gradient-to-r from-primary to-secondary">
-                Tên
-              </th>
-              <th className="px-2 py-2 bg-gradient-to-r from-primary to-secondary">
-                Loại
-              </th>
-              <th className="px-2 py-2 bg-gradient-to-r from-primary to-secondary">
-                Mã
-              </th>
-              <th className="px-2 py-2 bg-gradient-to-r from-primary to-secondary">
-                Kiểu giảm
-              </th>
-              <th className="px-2 py-2 bg-gradient-to-r from-primary to-secondary">
-                Giá trị giảm
-              </th>
-              <th className="px-2 py-2 bg-gradient-to-r from-primary to-secondary">
-                Giảm tối đa
-              </th>
-              <th className="px-2 py-2 bg-gradient-to-r from-primary to-secondary">
-                Đơn hàng tối thiểu
-              </th>
-              <th className="px-2 py-2 bg-gradient-to-r from-primary to-secondary">
-                Ngày hết hạn
-              </th>
-              <th className="px-2 py-2 bg-gradient-to-r from-primary to-secondary">
-                Giới hạn dùng
-              </th>
-              <th className="px-2 py-2 bg-gradient-to-r from-primary to-secondary">
-                Đã dùng
-              </th>
-              <th className="px-2 py-2 bg-gradient-to-r from-primary to-secondary">
-                Trạng thái
-              </th>
-              <th className="px-2 py-2 bg-gradient-to-r from-primary to-secondary text-center">
-                Hành động
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {vouchers.map((item, index) => {
-              return (
-                <tr
-                  key={item.id}
-                  className="relative border rounded my-2 bg-white"
-                >
-                  <td className="px-2 py-1  border-slate-500 text-center  font-bold">
-                    {index + 1}
-                  </td>
-                  <td className="px-2 py-1  border-slate-500  font-bold">
-                    {item?.name}
-                  </td>
-                  <td className="px-2 py-1  border-slate-500  font-bold">
-                    {item?.voucher_category}
-                  </td>
-                  <td className="px-2 py-1  border-slate-500  ">
-                    {item?.code}
-                  </td>
-                  <td className="px-2 py-1  border-slate-500  ">
-                    {item?.discount_type == "FIXED" ? "Cố Định" : "Phần Trăm"}
-                  </td>
-                  <td className="px-2 py-1  border-slate-500  ">
-                    {item?.discount_type == "FIXED"
-                      ? formatMoney(item?.value) + "đ"
-                      : item?.value + "%"}
-                  </td>
-                  <td className="px-2 py-1  border-slate-500  ">
-                    {item?.max_discount}
-                  </td>
-                  <td className="px-2 py-1  border-slate-500  ">
-                    {item?.min_order}
-                  </td>
-                  <td className="px-2 py-1  border-slate-500 text-nowrap  ">
-                    {moment(item?.expiry_date).format("DD-MM-YYYY")}
-                  </td>
-                  <td className="px-2 py-1  border-slate-500  ">
-                    {item?.usage_limit}
-                  </td>
-                  <td className="px-2 py-1  border-slate-500  ">
-                    {item?.usageCount}
-                  </td>
-                  <td className="px-2 py-1  border-slate-500  ">
-                    {item?.isPublic ? "Bật" : "Tắt"}
-                  </td>
-                  <td className="px-1 py-2 h-full flex  gap-2 items-center justify-center ">
-                    <Tooltip title="Chỉnh sửa">
-                      <Button
-                        onClick={() =>
-                          navigate(
-                            generatePath(paths.ADMIN.UPDATE_VOUCHER, {
-                              id: item?.id,
-                            }),
-                          )
-                        }
-                        className="text-blue-500 border-none"
-                      >
-                        <Icons.FaEdit />
-                      </Button>
-                    </Tooltip>
+      <Card>
+        <Row justify="end" style={{ marginBottom: '16px' }}>
+          <Col>
+            <Search
+              placeholder="Tìm kiếm khuyến mãi"
+              value={keyword}
+              onChange={(e) => setKeyword(e.target.value)}
+              style={{ width: 300 }}
+              allowClear
+            />
+          </Col>
+        </Row>
 
-                    <Tooltip title="Xóa">
-                      <Button
-                        className="text-red-500 border-none"
-                        onClick={() => handleDelete(item?.id)}
-                      >
-                        <Icons.MdDeleteForever />
-                      </Button>
-                    </Tooltip>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-        <div class="flex w-full justify-end p-2 ">
-          <Pagination
-            listLimit={[10, 25, 40, 100]}
-            limitCurrent={limit}
-            setLimit={setLimit}
-            totalPages={totalPages}
-            setPage={setPage}
-            pageCurrent={page}
-            totalElements={totalElements}
-          />
-        </div>
-      </div>
-    </div>
+        <Table
+          columns={columns}
+          dataSource={vouchers}
+          rowKey="id"
+          pagination={tableParams.pagination}
+          loading={loading}
+          onChange={handleTableChange}
+          scroll={{ x: 1000 }}
+          size="middle"
+        />
+      </Card>
+    </Card>
   );
 }
 

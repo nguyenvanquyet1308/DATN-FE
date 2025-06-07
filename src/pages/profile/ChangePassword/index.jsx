@@ -1,124 +1,217 @@
-import { notification } from "antd";
-import { updateChangePassword } from "apis/user.api";
 import React, { useState } from "react";
+import { 
+  Form, 
+  Input, 
+  Button, 
+  notification, 
+  Card, 
+  Typography, 
+  Divider, 
+  Space, 
+  Alert
+} from "antd";
+import { 
+  LockOutlined, 
+  EyeOutlined, 
+  EyeInvisibleOutlined, 
+  KeyOutlined,
+  SaveOutlined
+} from '@ant-design/icons';
+import { updateChangePassword } from "apis/user.api";
 import { useDispatch, useSelector } from "react-redux";
 import { changeLoading } from "store/slicers/common.slicer";
-import Icons from "utils/icons";
+
+const { Title, Text, Paragraph } = Typography;
 
 const ChangePasswordForm = () => {
-  const [showOldPassword, setShowOldPassword] = useState(false);
-  const [showNewPassword, setShowNewPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [oldPassword, setOldPassword] = useState("");
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [loading, setLoading] = useState(false); // Trạng thái loading
+  const [form] = Form.useForm();
+  const [submitting, setSubmitting] = useState(false);
   const userInfo = useSelector((state) => state.auth.userInfo.data);
   const dispatch = useDispatch();
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (newPassword !== confirmPassword) {
-      notification.error({ message: "Mật khẩu xác nhận không khớp!" });
+  const handleSubmit = async (values) => {
+    if (values.newPassword !== values.confirmPassword) {
+      notification.error({ 
+        message: "Lỗi xác nhận mật khẩu",
+        description: "Mật khẩu xác nhận không khớp với mật khẩu mới.",
+        placement: "top"
+      });
       return;
     }
 
-    if (newPassword.length < 6) {
-      notification.error({ message: "Mật khẩu mới phải có ít nhất 6 ký tự." });
-      return;
-    }
+    setSubmitting(true);
     dispatch(changeLoading());
 
     try {
-      const res = await updateChangePassword({
+      await updateChangePassword({
         email: userInfo.email,
-        oldPassword,
-        newPassword,
+        oldPassword: values.oldPassword,
+        newPassword: values.newPassword,
       });
-      notification.success({ message: "Cập nhật mật khẩu thành công!" });
-      setOldPassword("");
-      setNewPassword("");
-      setConfirmPassword("");
+      
+      notification.success({ 
+        message: "Thành công", 
+        description: "Cập nhật mật khẩu thành công!", 
+        placement: "top" 
+      });
+      
+      form.resetFields();
     } catch (error) {
       notification.error({
-        message:
-          error.response?.data?.message || "Mật khẩu cũ không chính xác !",
+        message: "Lỗi khi đổi mật khẩu",
+        description: error.response?.data?.message || "Mật khẩu cũ không chính xác!",
+        placement: "top"
       });
+    } finally {
+      dispatch(changeLoading());
+      setSubmitting(false);
     }
-    dispatch(changeLoading());
+  };
+
+  // Quy tắc mật khẩu mạnh
+  const validatePassword = (_, value) => {
+    if (!value) {
+      return Promise.reject("Vui lòng nhập mật khẩu mới");
+    }
+    if (value.length < 6) {
+      return Promise.reject("Mật khẩu phải có ít nhất 6 ký tự");
+    }
+    return Promise.resolve();
   };
 
   return (
-    <div className="flex justify-center items-center h-screen">
-      <div className="bg-white rounded-lg shadow-md p-8 w-96">
-        <h2 className="text-center text-[#704214] text-2xl font-bold mb-6">
-          ĐỔI MẬT KHẨU
-        </h2>
-        <form onSubmit={handleSubmit}>
-          {/* Mật khẩu cũ */}
-          <PasswordInput
-            label="Mật khẩu cũ"
-            value={oldPassword}
-            onChange={setOldPassword}
-            showPassword={showOldPassword}
-            setShowPassword={setShowOldPassword}
-          />
-          {/* Mật khẩu mới */}
-          <PasswordInput
-            label="Mật khẩu mới"
-            value={newPassword}
-            onChange={setNewPassword}
-            showPassword={showNewPassword}
-            setShowPassword={setShowNewPassword}
-          />
-          {/* Xác nhận mật khẩu */}
-          <PasswordInput
-            label="Nhập lại mật khẩu mới"
-            value={confirmPassword}
-            onChange={setConfirmPassword}
-            showPassword={showConfirmPassword}
-            setShowPassword={setShowConfirmPassword}
-          />
-          <button
-            type="submit"
-            className="w-full py-3 bg-[#704214] text-white font-bold rounded-md uppercase transition hover:bg-[#8c6239]"
+    <div className="change-password-container max-w-lg mx-auto">
+      <Card 
+        className="shadow-md hover:shadow-lg transition-all duration-300"
+        bordered={false}
+      >
+        <div className="text-center mb-6">
+          <Title level={2} className="text-blue-600 mb-2">Đổi mật khẩu</Title>
+          <Paragraph type="secondary">
+            Để bảo mật tài khoản, vui lòng không chia sẻ mật khẩu với người khác
+          </Paragraph>
+        </div>
+
+        <Alert
+          message="Lưu ý về bảo mật"
+          description="Mật khẩu mạnh nên bao gồm chữ hoa, chữ thường, số và ký tự đặc biệt. Nên đổi mật khẩu 3 tháng/lần."
+          type="info"
+          showIcon
+          className="mb-6"
+        />
+
+        <Form
+          form={form}
+          layout="vertical"
+          onFinish={handleSubmit}
+          requiredMark="optional"
+          className="password-form"
+        >
+          <Form.Item
+            name="oldPassword"
+            label="Mật khẩu hiện tại"
+            rules={[{ required: true, message: "Vui lòng nhập mật khẩu hiện tại" }]}
           >
-            Cập nhật
-          </button>
-        </form>
-      </div>
+            <Input.Password
+              prefix={<LockOutlined className="text-gray-400" />}
+              placeholder="Nhập mật khẩu hiện tại"
+              iconRender={(visible) =>
+                visible ? 
+                <EyeOutlined className="text-blue-500" /> : 
+                <EyeInvisibleOutlined className="text-gray-400" />
+              }
+              className="py-2"
+            />
+          </Form.Item>
+
+          <Divider plain>
+            <Text type="secondary">Mật khẩu mới</Text>
+          </Divider>
+
+          <Form.Item
+            name="newPassword"
+            label="Mật khẩu mới"
+            rules={[{ validator: validatePassword }]}
+            extra="Mật khẩu phải có ít nhất 6 ký tự"
+          >
+            <Input.Password
+              prefix={<LockOutlined className="text-gray-400" />}
+              placeholder="Nhập mật khẩu mới"
+              iconRender={(visible) =>
+                visible ? 
+                <EyeOutlined className="text-blue-500" /> : 
+                <EyeInvisibleOutlined className="text-gray-400" />
+              }
+              className="py-2"
+            />
+          </Form.Item>
+
+          <Form.Item
+            name="confirmPassword"
+            label="Xác nhận mật khẩu mới"
+            dependencies={['newPassword']}
+            rules={[
+              { required: true, message: "Vui lòng xác nhận mật khẩu mới" },
+              ({ getFieldValue }) => ({
+                validator(_, value) {
+                  if (!value || getFieldValue('newPassword') === value) {
+                    return Promise.resolve();
+                  }
+                  return Promise.reject("Mật khẩu xác nhận không khớp");
+                },
+              }),
+            ]}
+          >
+            <Input.Password
+              prefix={<LockOutlined className="text-gray-400" />}
+              placeholder="Nhập lại mật khẩu mới"
+              iconRender={(visible) =>
+                visible ? 
+                <EyeOutlined className="text-blue-500" /> : 
+                <EyeInvisibleOutlined className="text-gray-400" />
+              }
+              className="py-2"
+            />
+          </Form.Item>
+
+          <Form.Item className="mt-6">
+            <Button
+              type="primary"
+              htmlType="submit"
+              loading={submitting}
+              icon={<SaveOutlined />}
+              className="w-full h-10 text-base font-medium rounded-md"
+              size="large"
+            >
+              Cập nhật mật khẩu
+            </Button>
+          </Form.Item>
+        </Form>
+      </Card>
+
+      <style jsx global>{`
+        .change-password-container .ant-form-item-label > label {
+          font-weight: 500;
+        }
+        
+        .change-password-container .ant-input-affix-wrapper:hover,
+        .change-password-container .ant-input-affix-wrapper:focus {
+          border-color: #4096ff;
+          box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.1);
+        }
+        
+        .change-password-container .ant-input-affix-wrapper-focused {
+          border-color: #4096ff;
+          box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.1);
+        }
+        
+        .password-form .ant-form-item-extra {
+          color: #52c41a;
+          font-size: 0.8rem;
+        }
+      `}</style>
     </div>
   );
 };
-
-const PasswordInput = ({
-  label,
-  value,
-  onChange,
-  showPassword,
-  setShowPassword,
-}) => (
-  <div className="mb-4 relative">
-    <label className="block mb-2 text-sm text-gray-700">{label}</label>
-    <input
-      type={showPassword ? "text" : "password"}
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      required
-      className="w-full p-2 border border-gray-300 rounded-md bg-[#fefcfb] text-sm"
-    />
-    <button
-      type="button"
-      className="absolute right-3 top-1/2 transform -translate-y-1/2"
-      onClick={() => setShowPassword(!showPassword)}
-    >
-      {showPassword ? (
-        <Icons.FaRegEye className="h-5 w-5 mt-5 text-gray-600" />
-      ) : (
-        <Icons.FaRegEyeSlash className="h-5 mt-5 text-gray-600" />
-      )}
-    </button>
-  </div>
-);
 
 export default ChangePasswordForm;

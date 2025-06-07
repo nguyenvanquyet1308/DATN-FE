@@ -1,31 +1,39 @@
-import logo from "assets/images/logo.jpg";
-import { useEffect, useState } from "react";
-import { useForm } from "react-hook-form";
-import { Button, notification } from "antd";
+import React, { useEffect, useState } from "react";
+import { 
+  Form, 
+  Input, 
+  Button, 
+  notification, 
+  Select, 
+  Typography, 
+  Space, 
+  Divider 
+} from "antd";
 import { getRoles } from "apis/role.api";
 import { createUser, updateUser } from "apis/user.api";
 import { cleanEmptyDataObject } from "utils/helper";
+import logo from "assets/images/logo.jpg";
+import { UserOutlined, LockOutlined, PhoneOutlined, MailOutlined } from "@ant-design/icons";
+
+const { Title } = Typography;
+const { Option } = Select;
 
 function UserForm({ closeModal, fetchData, userCurrent }) {
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-    setValue,
-  } = useForm({
-    defaultValues: {
+  const [form] = Form.useForm();
+  const [userRoles, setUserRoles] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    // Khởi tạo form với giá trị mặc định
+    form.setFieldsValue({
       email: userCurrent?.email || "",
-      password: "123456",
+      password: userCurrent ? undefined : "123456",
       role: userCurrent?.role?.id || "1",
       phone_number: userCurrent?.phone_number || "",
       username: userCurrent?.username || "",
       avatar: userCurrent?.avatar || "",
-    },
-  });
+    });
 
-  const [userRoles, setUserRoles] = useState([]);
-
-  useEffect(() => {
     const fetchRoles = async () => {
       try {
         const res = await getRoles();
@@ -35,161 +43,181 @@ function UserForm({ closeModal, fetchData, userCurrent }) {
           setUserRoles([]);
         }
       } catch (error) {
-        console.error("Error fetching roles:", error);
         notification.error({
-          message: "Failed to fetch roles",
-          duration: 2,
+          message: "Lỗi khi tải vai trò",
+          description: error.message || "Đã xảy ra lỗi, vui lòng thử lại sau",
+          duration: 3,
         });
       }
     };
 
     fetchRoles();
-  }, []);
+  }, [form, userCurrent]);
 
-  const handleSubmitForm = async (data) => {
+  const handleSubmit = async (values) => {
+    setLoading(true);
     try {
+      // Nếu là cập nhật và không thay đổi mật khẩu, xóa trường password
+      if (userCurrent && !values.password) {
+        delete values.password;
+      }
+
       const payloadFormat = cleanEmptyDataObject({
-        ...data,
-        role: { id: +data.role },
+        ...values,
+        role: { id: +values.role },
       });
 
-      if (userCurrent) await updateUser(userCurrent.id, payloadFormat);
-      else await createUser(payloadFormat);
-      notification.success({
-        message: userCurrent ? "Cập nhật thành công." : "Tạo thành công.",
-        duration: 1,
-      });
+      if (userCurrent) {
+        await updateUser(userCurrent.id, payloadFormat);
+        notification.success({
+          message: "Cập nhật người dùng thành công",
+          duration: 2,
+        });
+      } else {
+        await createUser(payloadFormat);
+        notification.success({
+          message: "Tạo người dùng thành công",
+          duration: 2,
+        });
+      }
+
       closeModal();
       fetchData();
     } catch (error) {
-      notification.error({ message: error.message, duration: 1 });
+      notification.error({ 
+        message: "Lỗi khi lưu thông tin người dùng",
+        description: error.message || "Đã xảy ra lỗi, vui lòng thử lại sau",
+        duration: 3 
+      });
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div className="flex flex-col items-center select-none">
-      {/* Header */}
-      <div className="flex items-center justify-center w-full bg-light p-2">
-        <img src={logo} alt="logo" className="w-16 object-contain" />
-        <h2 className="text-lg font-bold text-center text-white w-full">
-          {userCurrent ? "Chỉnh sửa người dùng" : "Tạo người dùng"}
-        </h2>
-      </div>
+    <div>
+      <Space align="center" style={{ marginBottom: '20px' }}>
+        <img src={logo} alt="logo" style={{ width: '60px', height: 'auto' }} />
+        <Title level={4} style={{ margin: 0 }}>
+          {userCurrent ? "Chỉnh sửa thông tin người dùng" : "Tạo người dùng mới"}
+        </Title>
+      </Space>
 
-      {/* Form */}
-      <form
-        onSubmit={handleSubmit(handleSubmitForm)}
-        className="flex flex-col gap-4 mt-4 w-full"
+      <Divider />
+
+      <Form
+        form={form}
+        layout="vertical"
+        onFinish={handleSubmit}
+        autoComplete="off"
       >
-        <div className="flex gap-2">
-          <div className="flex-1">
-            <label htmlFor="username">Username</label>
-            <input
-              id="username"
-              {...register("username", {
-                minLength: {
-                  value: 6,
-                  message: "Username must be at least 6 characters",
-                },
-                maxLength: {
-                  value: 20,
-                  message: "Username cannot exceed 20 characters",
-                },
-              })}
-              placeholder="Enter username"
-              className="w-full py-2 px-2 border rounded-lg focus:outline-none focus:border-indigo-500"
-            />
-            {errors.username && (
-              <p className="text-red-500">{errors.username.message}</p>
-            )}
-          </div>
-
-          <div className="flex-1">
-            <label htmlFor="password">Password</label>
-            <input
-              id="password"
-              type="password"
-              {...register("password", {
-                required: "Password is required",
-                pattern: {
-                  value: /^[A-Za-z0-9]{6,20}$/,
-                  message: "Password must be between 6 and 20 characters",
-                },
-              })}
-              placeholder="Enter password"
-              className="w-full py-2 px-2 border rounded-lg focus:outline-none focus:border-indigo-500"
-            />
-            {errors.password && (
-              <p className="text-red-500">{errors.password.message}</p>
-            )}
-          </div>
-        </div>
-
-        <div className="flex gap-2">
-          <div className="flex-1">
-            <label htmlFor="role">Role</label>
-            <select
-              id="role"
-              {...register("role", {
-                required: "Role is required",
-              })}
-              className="w-full outline-primary border border-primary rounded"
-            >
-              {userRoles.map((role) => (
-                <option key={role.id} value={role.id}>
-                  {role.name}
-                </option>
-              ))}
-            </select>
-            {errors.role && (
-              <p className="text-red-500">{errors.role.message}</p>
-            )}
-          </div>
-
-          <div className="flex-1">
-            <label htmlFor="phone_number">Phone Number</label>
-            <input
-              id="phone_number"
-              {...register("phone_number", {
-                pattern: {
-                  value:
-                    /^(\+?\d{1,3}[-.\s]?)?(\(?\d{1,4}\)?[-.\s]?)?[\d\s.-]{7,15}$/,
-                  message: "Please enter a valid phone number",
-                },
-              })}
-              placeholder="Nhập số điện thoại"
-              className="w-full py-2 px-2 border rounded-lg focus:outline-none focus:border-indigo-500"
-            />
-            {errors.phone_number && (
-              <p className="text-red-500">{errors.phone_number.message}</p>
-            )}
-          </div>
-        </div>
-
-        <div className="flex-1">
-          <label htmlFor="email">Email</label>
-          <input
-            id="email"
-            {...register("email", {
-              required: "Email is required",
-              pattern: {
-                value: /\S+@\S+\.\S+/,
-                message: "Invalid email format",
-              },
-            })}
-            placeholder="Enter email"
-            className="w-full py-2 px-2 border rounded-lg focus:outline-none focus:border-indigo-500"
+        <Form.Item
+          name="username"
+          label="Tên người dùng"
+          rules={[
+            { 
+              required: true, 
+              message: "Vui lòng nhập tên người dùng" 
+            },
+            { 
+              min: 3, 
+              message: "Tên người dùng phải có ít nhất 3 ký tự" 
+            },
+            { 
+              max: 20, 
+              message: "Tên người dùng không được vượt quá 20 ký tự" 
+            }
+          ]}
+        >
+          <Input 
+            prefix={<UserOutlined />} 
+            placeholder="Nhập tên người dùng" 
           />
-          {errors.email && (
-            <p className="text-red-500">{errors.email.message}</p>
-          )}
-        </div>
+        </Form.Item>
 
-        <Button type="primary" htmlType="submit" className="w-full">
-          {userCurrent ? "Update" : "Create"}
-        </Button>
-      </form>
+        <Form.Item
+          name="email"
+          label="Email"
+          rules={[
+            { 
+              required: true, 
+              message: "Vui lòng nhập email" 
+            },
+            { 
+              type: "email", 
+              message: "Email không hợp lệ" 
+            }
+          ]}
+        >
+          <Input 
+            prefix={<MailOutlined />} 
+            placeholder="Nhập email" 
+          />
+        </Form.Item>
+
+        <Form.Item
+          name="password"
+          label="Mật khẩu"
+          rules={[
+            { 
+              required: !userCurrent, 
+              message: "Vui lòng nhập mật khẩu" 
+            },
+            { 
+              min: 6, 
+              message: "Mật khẩu phải có ít nhất 6 ký tự" 
+            }
+          ]}
+        >
+          <Input.Password 
+            prefix={<LockOutlined />} 
+            placeholder={userCurrent ? "Để trống nếu không thay đổi" : "Nhập mật khẩu"} 
+          />
+        </Form.Item>
+
+        <Form.Item
+          name="phone_number"
+          label="Số điện thoại"
+          rules={[
+            { 
+              pattern: /^(\+?\d{1,3}[-.\s]?)?(\(?\d{1,4}\)?[-.\s]?)?[\d\s.-]{7,15}$/, 
+              message: "Số điện thoại không hợp lệ" 
+            }
+          ]}
+        >
+          <Input 
+            prefix={<PhoneOutlined />} 
+            placeholder="Nhập số điện thoại" 
+          />
+        </Form.Item>
+
+        <Form.Item
+          name="role"
+          label="Vai trò"
+          rules={[{ required: true, message: "Vui lòng chọn vai trò" }]}
+        >
+          <Select placeholder="Chọn vai trò">
+            {userRoles.map((role) => (
+              <Option key={role.id} value={role.id}>
+                {role.name}
+              </Option>
+            ))}
+          </Select>
+        </Form.Item>
+
+        <Form.Item>
+          <Space style={{ width: '100%', justifyContent: 'flex-end' }}>
+            <Button onClick={closeModal}>
+              Hủy
+            </Button>
+            <Button type="primary" htmlType="submit" loading={loading}>
+              {userCurrent ? "Cập nhật" : "Tạo mới"}
+            </Button>
+          </Space>
+        </Form.Item>
+      </Form>
     </div>
   );
 }
+
 export default UserForm;

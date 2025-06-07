@@ -1,9 +1,21 @@
-import { Input, Modal, Tooltip } from "antd";
-import CartForm from "components/CartForm";
+import React, { useState } from "react";
+import { 
+  Modal, 
+  Tooltip, 
+  Card, 
+  Typography, 
+  Tag, 
+  Space, 
+  Rate, 
+  Button,
+  Badge,
+  Image
+} from "antd";
+import { ShoppingCartOutlined } from "@ant-design/icons";
 import { COLOR_DATA_OPTIONS_PANEL } from "constant/filterData";
 import paths from "constant/paths";
 import withBaseComponent from "hocs";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect } from "react";
 import { generatePath } from "react-router-dom";
 import ReactStars from "react-stars";
 import { fillUniqueATTSkus, formatMoney, trunCateText } from "utils/helper";
@@ -11,6 +23,8 @@ import Icons from "utils/icons";
 import AddProductForm from "./AddProductForm";
 import { getProductListRequest } from "store/slicers/product.slicer";
 import { useDispatch } from "react-redux";
+
+const { Text, Title } = Typography;
 
 function AddProductToOrder({ data, navigate }) {
   const [isShowModal, setIsShowModal] = useState(false);
@@ -22,97 +36,112 @@ function AddProductToOrder({ data, navigate }) {
     setIsShowModal(true);
   };
 
+  const uniqueColors = fillUniqueATTSkus(data?.skus, "color");
+  const uniqueSizes = fillUniqueATTSkus(data?.skus, "size");
+  
+  const getColorStyle = (colorName) => {
+    const colorData = COLOR_DATA_OPTIONS_PANEL.find(
+      (dataColor) => colorName?.toLowerCase()?.includes(dataColor.key)
+    );
+    return colorData?.color || "bg-gray-400";
+  };
+
   return (
     <>
       <Modal
+        title="Thêm sản phẩm vào đơn hàng"
         width={800}
         open={isShowModal}
         onCancel={() => setIsShowModal(false)}
-        footer={false}
+        footer={null}
+        destroyOnClose
       >
         <AddProductForm data={data} closeModal={() => setIsShowModal(false)} />
       </Modal>
-      <div
-        key={data.id}
-        className="py-2 bg-white rounded-lg shadow-lg overflow-hidden hover:shadow-xl transition-shadow duration-300 cursor-pointer"
-        // onClick={() =>
-        //     navigate(
-        //         generatePath(paths.DETAIL_PRODUCT, { id: data?.id }),
-        //         { state: { productData: data } }
-        //     )
-        // }
-      >
-        <div className="px-4">
-          <img
-            src={skuShow?.images?.split(",")[0]}
-            alt={skuShow?.code}
-            className="h-40 w-full object-contain"
-          />
-        </div>
-        <div className="py-1 px-2 flex flex-col gap-2">
-          <h2 className="text-sm">{trunCateText(data.name, 46)}</h2>
-          <div className="flex gap-2 items-center">
-            <p className="text-gray-900 font-bold ">
-              {formatMoney(skuShow?.price)}
-              <sup>
-                <u>đ</u>
-              </sup>
-            </p>
-            <p className="bg-gray-200 p-1 rounded text-sm ">
-              -{skuShow?.discount}%
-            </p>
-          </div>
-          {
-            <div className="flex gap-2 flex-wrap items-center">
-              {fillUniqueATTSkus(data?.skus, "color").length > 2 && (
-                <div className="px-2 bg-gray-100 rounded text-sm flex gap-2 p-1">
-                  {fillUniqueATTSkus(data?.skus, "color").map((sku) => (
-                    <Tooltip title={sku?.attributes?.color}>
-                      <div
-                        className={`w-5 h-5 rounded-full border border-gray-400  
-                                                    ${
-                                                      COLOR_DATA_OPTIONS_PANEL.find(
-                                                        (dataColor) =>
-                                                          sku?.attributes?.color
-                                                            ?.toLowerCase()
-                                                            .includes(
-                                                              dataColor.key,
-                                                            ),
-                                                      )?.color
-                                                    }
-                                                   cursor-pointer`}
-                        onMouseEnter={() => setSkuShow(sku)}
-                      ></div>
-                    </Tooltip>
-                  ))}
-                </div>
-              )}
-              {fillUniqueATTSkus(data?.skus, "size").length > 2 && (
-                <div className="px-2 bg-gray-100 rounded text-sm">
-                  {fillUniqueATTSkus(data?.skus, "size").length} Size
-                </div>
-              )}
-            </div>
-          }
-          <div className="flex gap-2 text-sm items-center pr-2">
-            <ReactStars
-              value={data?.stars || 5}
-              color2="#E9C71B"
-              half={true}
-              edit={false}
+      
+      <Card
+        hoverable
+        cover={
+          <div style={{ padding: "16px", display: "flex", justifyContent: "center", height: "180px" }}>
+            <Image
+              src={skuShow?.images?.split(",")[0]}
+              alt={skuShow?.code}
+              style={{ maxHeight: "100%", objectFit: "contain" }}
+              preview={false}
             />
-            {data?.totalSold > 0 && (
-              <span className="border-l text-gray-400 px-2 ">
-                {data?.totalSold}
-              </span>
-            )}
-
-            <div onClick={(e) => openFormCart(e, data)} className="ml-auto p-1">
-              <Icons.FaCartPlus color="green" size={18} />
-            </div>
           </div>
-        </div>
-      </div>
+        }
+        actions={[
+          <Button 
+            type="primary" 
+            icon={<ShoppingCartOutlined />} 
+            onClick={openFormCart}
+            style={{ background: "#52c41a", borderColor: "#52c41a" }}
+          >
+            Thêm vào đơn
+          </Button>
+        ]}
+      >
+        <Space direction="vertical" size="small" style={{ width: "100%" }}>
+          <Title level={5} ellipsis={{ tooltip: data.name }}>
+            {trunCateText(data.name, 46)}
+          </Title>
+          
+          <Space>
+            <Text strong style={{ fontSize: "16px", color: "#f5222d" }}>
+              {formatMoney(skuShow?.price)}đ
+            </Text>
+            {skuShow?.discount > 0 && (
+              <Tag color="volcano">-{skuShow?.discount}%</Tag>
+            )}
+          </Space>
+          
+          {uniqueColors.length > 0 && (
+            <div>
+              <Text type="secondary">Màu sắc:</Text>
+              <div style={{ display: "flex", gap: "4px", marginTop: "4px" }}>
+                {uniqueColors.map((sku, index) => (
+                  <Tooltip key={index} title={sku?.attributes?.color}>
+                    <div
+                      className={`${getColorStyle(sku?.attributes?.color)}`}
+                      style={{ 
+                        width: "20px", 
+                        height: "20px", 
+                        borderRadius: "50%", 
+                        border: "1px solid #d9d9d9",
+                        cursor: "pointer",
+                        boxShadow: skuShow === sku ? "0 0 0 2px #1890ff" : "none"
+                      }}
+                      onMouseEnter={() => setSkuShow(sku)}
+                    />
+                  </Tooltip>
+                ))}
+              </div>
+            </div>
+          )}
+          
+          {uniqueSizes.length > 2 && (
+            <Tag color="blue">
+              {uniqueSizes.length} kích thước
+            </Tag>
+          )}
+          
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <Rate 
+              disabled 
+              defaultValue={data?.stars || 5} 
+              allowHalf 
+              style={{ fontSize: "14px" }} 
+            />
+            
+            {data?.totalSold > 0 && (
+              <Badge count={data?.totalSold} color="#faad14" overflowCount={999}>
+                <Text type="secondary" style={{ padding: "0 8px" }}>Đã bán</Text>
+              </Badge>
+            )}
+          </div>
+        </Space>
+      </Card>
     </>
   );
 }

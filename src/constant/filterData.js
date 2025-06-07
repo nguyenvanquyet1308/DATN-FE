@@ -10,47 +10,47 @@ export const BRAND_DATA_OPTIONS = [
 
 export const COLOR_DATA_OPTIONS_PANEL = [
   {
-    color: "bg-red-600",
+    color: "#dc2626",
     key: "đỏ",
   },
   {
-    color: "bg-green-600",
+    color: "#16a34a",
     key: "lục",
   },
   {
-    color: "bg-blue-600",
+    color: "#2563eb",
     key: "xanh",
   },
   {
-    color: "bg-yellow-500",
+    color: "#eab308",
     key: "vàng",
   },
   {
-    color: "bg-white-600",
+    color: "#ffffff",
     key: "trắng",
   },
   {
-    color: "bg-black",
+    color: "#000000",
     key: "đen",
   },
   {
-    color: "bg-pink-500",
+    color: "#ec4899",
     key: "hồng",
   },
   {
-    color: "bg-purple-600",
+    color: "#9333ea",
     key: "tím",
   },
   {
-    color: "bg-gray-600",
+    color: "#4b5563",
     key: "xám",
   },
   {
-    color: "bg-orange-900",
+    color: "#7c2d12",
     key: "nâu",
   },
   {
-    color: "bg-neutral-200",
+    color: "#e5e5e5",
     key: "sữa",
   },
 ];

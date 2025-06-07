@@ -1,210 +1,272 @@
-import { notification, Select } from "antd";
-import { useEffect, useState } from "react";
-import { useForm } from "react-hook-form";
-import logo from "assets/images/logo.jpg";
-import InputForm from "components/InputForm";
-import { convertBase64ToImage, convertImageToBase64 } from "utils/helper";
-import MarkdownEditor from "components/MarkdownEditor";
-import { changeLoading } from "store/slicers/common.slicer";
+import React, { useEffect, useState } from "react";
+import { 
+  Form, 
+  Input, 
+  Button, 
+  Select, 
+  notification, 
+  Typography, 
+  Upload, 
+  Space, 
+  Divider 
+} from "antd";
+import { PlusOutlined, UploadOutlined } from "@ant-design/icons";
+import { useSelector, useDispatch } from "react-redux";
 import { createBlog, updateBlog } from "apis/blog.api";
-import { useDispatch, useSelector } from "react-redux";
 import { getCategoryBlog } from "apis/categoryBlog.api";
+import { convertBase64ToImage, convertImageToBase64 } from "utils/helper";
+import { changeLoading } from "store/slicers/common.slicer";
+import MarkdownEditor from "components/MarkdownEditor";
+import logo from "assets/images/logo.jpg";
+
+const { Title, Text } = Typography;
+const { Option } = Select;
+const { TextArea } = Input;
 
 function BlogForm({ closeModal, fetchData, blogCurrent }) {
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-    setValue,
-    reset,
-  } = useForm();
-
   const dispatch = useDispatch();
+  const [form] = Form.useForm();
+  
   const [previewImg, setPreviewImg] = useState(null);
   const [imgUpload, setImageUpload] = useState(null);
   const [categoryBlog, setCategoryBlog] = useState([]);
-  const [selectedCategoryBlog, setSelectedCategoryBlog] = useState(null);
   const [content, setContent] = useState("");
   const userInfo = useSelector((state) => state.auth.userInfo.data);
 
   const fetchCategoryBlog = async () => {
-    const params = { limit: 30 };
-    const res = await getCategoryBlog(params);
-    setCategoryBlog(res?.result?.content);
-    setSelectedCategoryBlog(blogCurrent?.categoryBlogName);
+    try {
+      const params = { limit: 30 };
+      const res = await getCategoryBlog(params);
+      setCategoryBlog(res?.result?.content || []);
+    } catch (error) {
+      notification.error({ 
+        message: "Không thể tải danh mục bài viết", 
+        description: error.message 
+      });
+    }
   };
 
   useEffect(() => {
-    const handleFillToForm = async () => {
-      setValue("title", blogCurrent["title"]);
-      setContent(blogCurrent?.content);
-
-      if (blogCurrent?.image) {
-        setPreviewImg(blogCurrent?.image);
-        console.log(blogCurrent?.image);
-        let file = await convertBase64ToImage(blogCurrent?.image);
-        setImageUpload(file);
-      }
-    };
     fetchCategoryBlog();
-    handleResetForm();
-    if (blogCurrent?.blogId) handleFillToForm();
+    resetForm();
+    
+    if (blogCurrent?.blogId) {
+      fillFormData();
+    }
   }, [blogCurrent]);
 
-  const handleResetForm = () => {
-    reset();
-    setImageUpload(null);
-    setPreviewImg(null);
+  const fillFormData = async () => {
+    form.setFieldsValue({
+      title: blogCurrent.title,
+      categoryBlogId: blogCurrent.categoryBlogId
+    });
+    
+    setContent(blogCurrent?.content || "");
+
+    if (blogCurrent?.image) {
+      setPreviewImg(blogCurrent.image);
+      try {
+        const file = await convertBase64ToImage(blogCurrent.image);
+        setImageUpload(file);
+      } catch (error) {
+        notification.error({ 
+          message: "Lỗi khi tải hình ảnh", 
+          description: error.message 
+        });
+      }
+    }
   };
 
-  const handleUpdate = async (data) => {
-    if (content) data = { ...data, content };
+  const resetForm = () => {
+    form.resetFields();
+    setImageUpload(null);
+    setPreviewImg(null);
+    setContent("");
+  };
+
+  const handleSubmit = async (values) => {
     if (!imgUpload) {
-      notification.error({ message: "Please upload an image" });
+      notification.error({ 
+        message: "Vui lòng tải lên một hình ảnh cho bài viết" 
+      });
       return;
     }
-    data = {
-      ...data,
-      categoryBlogId: selectedCategoryBlog,
+
+    const blogData = {
+      ...values,
+      content,
       userId: userInfo.id,
     };
 
     const formData = new FormData();
-
     formData.append("image", imgUpload);
-    formData.append("blogData", JSON.stringify(data));
+    formData.append("blogData", JSON.stringify(blogData));
 
+    dispatch(changeLoading());
     try {
-      dispatch(changeLoading());
       if (blogCurrent?.blogId) {
-        await updateBlog(blogCurrent?.blogId, formData);
-        notification.success({ message: "Cập nhật thành công" });
+        await updateBlog(blogCurrent.blogId, formData);
+        notification.success({ 
+          message: "Cập nhật bài viết thành công" 
+        });
       } else {
         await createBlog(formData);
-        notification.success({ message: "Tạo thành công" });
+        notification.success({ 
+          message: "Tạo bài viết mới thành công" 
+        });
       }
       await fetchData();
       closeModal();
     } catch (error) {
       notification.error({
-        message: `${
-          blogCurrent?.blogId ? "Cập nhật" : "Tạo"
-        } không thành công: ${error.message}`,
+        message: `${blogCurrent?.blogId ? "Cập nhật" : "Tạo"} bài viết không thành công`,
+        description: error.message
       });
     } finally {
       dispatch(changeLoading());
     }
   };
 
-  const handleOnchangeThumb = async (file) => {
+  const handleImageChange = async (file) => {
+    if (!file) return;
+    
     if (file.type !== "image/png" && file.type !== "image/jpeg") {
-      notification.error({ message: "File not supported..." });
+      notification.error({ 
+        message: "Chỉ hỗ trợ định dạng PNG và JPEG" 
+      });
       return;
     }
-    let base64 = await convertImageToBase64(file);
-    setPreviewImg(base64);
-    setImageUpload(file);
+
+    try {
+      const base64 = await convertImageToBase64(file);
+      setPreviewImg(base64);
+      setImageUpload(file);
+    } catch (error) {
+      notification.error({ 
+        message: "Lỗi khi xử lý hình ảnh", 
+        description: error.message 
+      });
+    }
   };
 
   return (
-    <div className="flex flex-col justify-center items-center">
-      <div className="flex flex-col justify-center w-full items-center">
-        <img src={logo} alt="logo" className="w-20 object-contain" />
-        <h2 className="text-center border border-y-main w-full bg-light text-white">
-          {blogCurrent ? `Edit Blog` : "Create Blog"}
-        </h2>
+    <div className="blog-form">
+      <div style={{ textAlign: 'center', marginBottom: 20 }}>
+        <Space direction="vertical" align="center">
+          <img src={logo} alt="logo" style={{ width: 80, height: 'auto' }} />
+          <Title level={4}>
+            {blogCurrent ? "Chỉnh sửa bài viết" : "Tạo bài viết mới"}
+          </Title>
+        </Space>
       </div>
 
-      <form
-        onSubmit={handleSubmit(handleUpdate)}
-        className="flex flex-col w-full gap-2 mt-2"
+      <Form
+        form={form}
+        layout="vertical"
+        onFinish={handleSubmit}
+        initialValues={{
+          title: "",
+          categoryBlogId: categoryBlog?.[0]?.categoryBlogId || null
+        }}
       >
-        <div className="flex items-center gap-8 justify-center">
-          <span className="font-bold">Thumb nail </span>
-          <label
-            className="h-[160px] w-[160px] border-2 border-main p-2 flex justify-center items-center"
-            htmlFor="thumbnail"
-          >
-            {previewImg ? (
-              <img
-                src={previewImg}
-                alt=""
-                className="object-contain w-full h-full"
-              />
-            ) : (
-              <h1 className="font-bold text-blue-600 ">Chọn hình ảnh</h1>
-            )}
-          </label>
-        </div>
-        <input
-          type="file"
-          id="thumbnail"
-          accept=".jpg, .jpeg, .png"
-          onChange={(e) => handleOnchangeThumb(e.target.files[0])}
-          className="hidden"
-        />
-        <br />
-        <div className="flex gap-4 px-2 py-4 border rounded border-black">
-          <label
-            htmlFor="category"
-            className="text-lg font-bold text-nowrap text-black"
-          >
-            CategoryBlog:
-          </label>
+        <Form.Item label="Hình ảnh bài viết">
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+            <div 
+              style={{ 
+                width: 200, 
+                height: 200, 
+                border: '1px dashed #d9d9d9', 
+                borderRadius: 8, 
+                display: 'flex', 
+                justifyContent: 'center', 
+                alignItems: 'center',
+                overflow: 'hidden',
+                marginBottom: 16
+              }}
+            >
+              {previewImg ? (
+                <img 
+                  src={previewImg} 
+                  alt="Thumbnail" 
+                  style={{ 
+                    maxWidth: '100%', 
+                    maxHeight: '100%', 
+                    objectFit: 'contain' 
+                  }} 
+                />
+              ) : (
+                <div style={{ textAlign: 'center' }}>
+                  <PlusOutlined style={{ fontSize: 24, color: '#1890ff' }} />
+                  <div style={{ marginTop: 8 }}>Chọn hình ảnh</div>
+                </div>
+              )}
+            </div>
+
+            <Upload
+              beforeUpload={(file) => {
+                handleImageChange(file);
+                return false;
+              }}
+              showUploadList={false}
+              accept=".jpg,.jpeg,.png"
+            >
+              <Button icon={<UploadOutlined />}>
+                {previewImg ? "Thay đổi hình ảnh" : "Tải hình ảnh lên"}
+              </Button>
+            </Upload>
+          </div>
+        </Form.Item>
+
+        <Divider />
+
+        <Form.Item
+          name="categoryBlogId"
+          label="Danh mục bài viết"
+          rules={[{ required: true, message: 'Vui lòng chọn danh mục bài viết' }]}
+        >
           <Select
             showSearch
-            id="categoryBlog"
-            title="categoryBlog"
-            allowClear
-            placeholder={
-              errors?.categoryBlog ? "Required a category" : "Select a category"
+            placeholder="Chọn danh mục bài viết"
+            optionFilterProp="children"
+            filterOption={(input, option) =>
+              option.children.toLowerCase().indexOf(input.toLowerCase()) >= 0
             }
-            className={`w-full text-lg font-bold ${
-              errors["category"]
-                ? "shadow-md shadow-red-500 rounded-lg text-red-500"
-                : ""
-            }`}
-            value={
-              selectedCategoryBlog ||
-              (categoryBlog?.[0]?.categoryBlogId ?? null)
-            }
-            optionFilterProp="label"
-            options={categoryBlog?.map((el) => ({
-              label: el?.name,
-              value: el?.categoryBlogId,
-            }))}
-            onChange={(value) => setSelectedCategoryBlog(value)}
-          />
-        </div>
-        <br />
+          >
+            {categoryBlog?.map((category) => (
+              <Option key={category.categoryBlogId} value={category.categoryBlogId}>
+                {category.name}
+              </Option>
+            ))}
+          </Select>
+        </Form.Item>
 
-        <InputForm
-          errors={errors}
-          id={"title"}
-          register={register}
-          fullWidth
-          validate={{ required: `Require this field` }}
-        />
-
-        <MarkdownEditor
-          height={600}
-          label={"Content :"}
-          name={"content"}
-          id={"content"}
-          value={content}
-          register={register}
-          validate={{}}
-          errors={errors}
-          setValue={setContent}
-        />
-
-        <button
-          className="w-full p-2 bg-light text-lg text-white"
-          type="submit"
+        <Form.Item
+          name="title"
+          label="Tiêu đề bài viết"
+          rules={[{ required: true, message: 'Vui lòng nhập tiêu đề bài viết' }]}
         >
-          {blogCurrent ? `Update` : "Create"}
-        </button>
-      </form>
+          <Input placeholder="Nhập tiêu đề bài viết" />
+        </Form.Item>
+
+        <Form.Item label="Nội dung bài viết">
+          <MarkdownEditor
+            height={400}
+            value={content}
+            setValue={setContent}
+          />
+        </Form.Item>
+
+        <Form.Item>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
+            <Button onClick={closeModal}>
+              Hủy
+            </Button>
+            <Button type="primary" htmlType="submit">
+              {blogCurrent ? "Cập nhật" : "Tạo mới"}
+            </Button>
+          </div>
+        </Form.Item>
+      </Form>
     </div>
   );
 }

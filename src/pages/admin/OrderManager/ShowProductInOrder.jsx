@@ -1,17 +1,31 @@
+import React, { useEffect, useState } from "react";
 import { useSelector } from "react-redux";
+import { 
+  Input, 
+  Pagination, 
+  Card, 
+  Empty, 
+  Spin, 
+  Row, 
+  Col, 
+  Typography, 
+  Space,
+  Alert
+} from "antd";
 import AddProductToOrder from "./AddProductToOrder";
-import { useEffect, useState } from "react";
-import { Input, Pagination } from "antd";
+
+const { Title, Text } = Typography;
+const { Search } = Input;
 
 const ShowProductInOrder = () => {
   const {
     data: productList,
-    meta,
     loading,
     error,
   } = useSelector((state) => state.product.productList);
+
   const [keyword, setKeyword] = useState("");
-  const [filteredData, setFilteredData] = useState(productList);
+  const [filteredData, setFilteredData] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(8);
 
@@ -21,50 +35,96 @@ const ShowProductInOrder = () => {
         product.name.toLowerCase().includes(keyword.toLowerCase()),
       );
       setFilteredData(filtered);
+      setCurrentPage(1); // Reset to first page on new search
     } else {
       setFilteredData([]);
     }
   }, [productList, keyword]);
 
+  const handleSearch = (value) => {
+    setKeyword(value);
+  };
+
+  const handlePageChange = (page, size) => {
+    setCurrentPage(page);
+    setPageSize(size);
+  };
+
+  // Calculate pagination
   const startIndex = (currentPage - 1) * pageSize;
   const endIndex = startIndex + pageSize;
   const paginatedData = Array.isArray(filteredData)
     ? filteredData.slice(startIndex, endIndex)
     : [];
 
+  if (loading) {
+    return (
+      <div style={{ textAlign: 'center', padding: '50px' }}>
+        <Spin size="large" tip="Đang tải sản phẩm..." />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <Alert
+        message="Lỗi khi tải dữ liệu"
+        description={error.message || "Không thể tải danh sách sản phẩm"}
+        type="error"
+        showIcon
+      />
+    );
+  }
+
   return (
-    <div>
-      <div className="p-2">
-        <Input.Search
+    <Card>
+      <Space direction="vertical" size="large" style={{ width: '100%' }}>
+        <Title level={4}>Thêm sản phẩm vào đơn hàng</Title>
+        
+        <Search
+          placeholder="Tìm kiếm sản phẩm theo tên"
           allowClear
+          enterButton="Tìm kiếm"
+          size="large"
           value={keyword}
           onChange={(e) => setKeyword(e.target.value)}
-          enterButton
-          placeholder="Tìm kiếm theo từ khóa"
+          onSearch={handleSearch}
         />
-      </div>
-      <div className="p-2 grid grid-cols-1 sm:grid-cols-2 bg-gray-100 lg:grid-cols-4 gap-8">
-        {paginatedData.length > 0 ? (
-          paginatedData.map((product) => (
-            <AddProductToOrder key={product.id} data={product} />
-          ))
+        
+        {filteredData.length === 0 ? (
+          <Empty 
+            description="Không tìm thấy sản phẩm nào" 
+            image={Empty.PRESENTED_IMAGE_SIMPLE} 
+          />
         ) : (
-          <div>Không tìm thấy sản phẩm nào</div>
+          <>
+            <Text type="secondary">
+              Tìm thấy {filteredData.length} sản phẩm
+            </Text>
+            
+            <Row gutter={[16, 16]}>
+              {paginatedData.map((product) => (
+                <Col xs={24} sm={12} md={8} lg={6} key={product.id}>
+                  <AddProductToOrder data={product} />
+                </Col>
+              ))}
+            </Row>
+            
+            <div style={{ textAlign: 'center', marginTop: 16 }}>
+              <Pagination
+                current={currentPage}
+                pageSize={pageSize}
+                total={filteredData.length}
+                onChange={handlePageChange}
+                showSizeChanger
+                pageSizeOptions={[4, 8, 12, 16]}
+                showTotal={(total) => `Tổng cộng ${total} sản phẩm`}
+              />
+            </div>
+          </>
         )}
-      </div>
-      <div className="p-2 flex justify-center">
-        <Pagination
-          current={currentPage}
-          pageSize={pageSize}
-          total={filteredData.length}
-          onChange={(page, size) => {
-            setCurrentPage(page);
-            setPageSize(size);
-          }}
-          showSizeChanger
-        />
-      </div>
-    </div>
+      </Space>
+    </Card>
   );
 };
 

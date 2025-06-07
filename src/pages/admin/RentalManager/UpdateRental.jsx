@@ -1,4 +1,4 @@
-import { Button, Checkbox, Input, notification, Select } from "antd";
+import { Button, Checkbox, Input, notification, Select, Card, Spin, Tag, Typography, Space, Divider, Badge, Row, Col, Drawer } from "antd";
 import { getProducts } from "apis/product.api";
 import logo from "assets/images/logo.jpg";
 import paths from "constant/paths";
@@ -19,6 +19,9 @@ import { createRental } from "apis/rental.api";
 import { getDistricts, getProvinces, getWards } from "apis/address.api";
 import { useForm } from "react-hook-form";
 import useDebounce from "hooks/useDebounce";
+import { ShoppingCartOutlined, HomeOutlined, BankOutlined, PlusOutlined, MinusOutlined, SearchOutlined, TagOutlined } from '@ant-design/icons';
+
+const { Title, Text } = Typography;
 
 function UpdateRental() {
   const [isLoading, setIsLoading] = useState(false);
@@ -41,6 +44,7 @@ function UpdateRental() {
   const [selectedDistrict, setSelectedDistrict] = useState(null);
   const [selectedWard, setSelectedWard] = useState(null);
   const [keyword, setKeyword] = useState("");
+  const [mobileDrawerVisible, setMobileDrawerVisible] = useState(false);
   let keywordDebounce = useDebounce(keyword, 400);
 
   const {
@@ -55,6 +59,7 @@ function UpdateRental() {
       street: "",
     },
   });
+  
   const fetchProvinces = async () => {
     try {
       const res = await getProvinces();
@@ -391,494 +396,561 @@ function UpdateRental() {
     }
   };
 
+  const toggleMobileDrawer = () => {
+    setMobileDrawerVisible(!mobileDrawerVisible);
+  };
+
+  const renderProductItem = (sku, indexCV, indexSKU, cvData) => (
+    <Card 
+      key={`${indexCV}-${indexSKU}`}
+      className="product-card mb-3 transition-all hover:shadow-md"
+      bodyStyle={{ padding: '12px' }}
+    >
+      <div className="flex items-start">
+        <Checkbox
+          checked={sku.isChoose}
+          onChange={(e) => handleCheckboxChange(e.target.checked, indexCV, indexSKU)}
+          className="mt-2 mr-3"
+        />
+        <div className="flex flex-col sm:flex-row gap-3 w-full">
+          <div className="flex-shrink-0">
+            <img
+              src={sku?.images?.split(",")[0]}
+              alt={sku?.productName}
+              className="w-28 h-32 rounded-lg object-cover border border-gray-200"
+            />
+          </div>
+          <div className="flex-grow">
+            <Title level={5} className="text-primary mb-1">{sku?.productName}</Title>
+            
+            {sku?.attributes?.color && (
+              <div className="flex gap-2 mb-2">
+                <Text strong>Màu:</Text>
+                <Tag color="blue">{sku.attributes?.color}</Tag>
+              </div>
+            )}
+
+            {sku.attributes?.size && productData?.content && (
+              <div className="mb-2">
+                <Text strong className="text-blue-600 mr-2">Kích thước:</Text>
+                <Space wrap className="mt-1">
+                  {fillUniqueATTSkus(
+                    productData?.content[cvData?.indexProduct]?.skus,
+                    "size",
+                  ).map((el, i) => (
+                    <Tag
+                      key={i}
+                      className="cursor-pointer transition-all"
+                      color={sku.attributes.size === el.attributes.size ? "blue" : "default"}
+                      onClick={() => handleChangeConvertedSkus(
+                        "size",
+                        el.attributes.size,
+                        cvData?.indexProduct,
+                        indexCV,
+                        indexSKU,
+                      )}
+                    >
+                      {el.attributes.size}
+                    </Tag>
+                  ))}
+                </Space>
+              </div>
+            )}
+
+            {sku.attributes?.material && productData?.content && (
+              <div className="mb-2">
+                <Text strong className="text-blue-600 mr-2">Chất liệu:</Text>
+                <Space wrap className="mt-1">
+                  {fillUniqueATTSkus(
+                    productData?.content[cvData?.indexProduct]?.skus,
+                    "material",
+                  ).map((el, i) => (
+                    <Tag
+                      key={i}
+                      className="cursor-pointer transition-all"
+                      color={sku.attributes.material === el.attributes.material ? "blue" : "default"}
+                      onClick={() => handleChangeConvertedSkus(
+                        "material",
+                        el.attributes.material,
+                        cvData?.indexProduct,
+                        indexCV,
+                        indexSKU,
+                      )}
+                    >
+                      {el.attributes.material}
+                    </Tag>
+                  ))}
+                </Space>
+              </div>
+            )}
+
+            <div className="flex flex-wrap gap-3 items-center mt-3">
+              <div className="flex items-center">
+                <Button 
+                  icon={<MinusOutlined />} 
+                  size="small"
+                  onClick={() => handleDecreaseQuantity(indexCV, indexSKU)}
+                  className="border-blue-500 text-blue-500"
+                />
+                <Input
+                  type="number"
+                  className="w-14 mx-1 text-center"
+                  value={sku.quantity}
+                  onChange={(e) => handleQuantityChange(e.target.value, indexCV, indexSKU)}
+                />
+                <Button 
+                  icon={<PlusOutlined />} 
+                  size="small"
+                  onClick={() => handleIncreaseQuantity(indexCV, indexSKU)}
+                  className="border-blue-500 text-blue-500"
+                />
+              </div>
+
+              <div className="flex items-center gap-1">
+                <Text>Giờ:</Text>
+                <Select
+                  className="w-20"
+                  value={sku.hour}
+                  onChange={(value) => handleHourChange(value, indexCV, indexSKU)}
+                  options={Array.from(
+                    { length: 24 },
+                    (_, value) => ({
+                      label: `${value} Giờ`,
+                      value,
+                    }),
+                  )}
+                  size="small"
+                />
+              </div>
+
+              <div className="flex items-center gap-1">
+                <Text>Ngày:</Text>
+                <Input
+                  type="number"
+                  className="w-16"
+                  value={sku.day}
+                  onChange={(e) => handleDayChange(e.target.value, indexCV, indexSKU)}
+                  size="small"
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end mt-2">
+              <Text strong className="text-orange-600">
+                {formatMoney(calTotalRental(sku))} vnđ
+              </Text>
+            </div>
+          </div>
+        </div>
+      </div>
+    </Card>
+  );
+
+  const renderOrderForm = () => (
+    <div className="order-form">
+      <Card title="Thông tin giao hàng" className="mb-4">
+        <form
+          onSubmit={handleSubmit(handleRental)}
+          className="flex flex-col gap-3"
+        >
+          <div className="form-group">
+            <Text strong>Họ và tên:</Text>
+            <Input
+              placeholder="Nhập tên"
+              {...register("username", {
+                required: "Yêu cầu nhập tên người dùng",
+              })}
+              status={errors.username ? "error" : ""}
+              className="mt-1"
+            />
+            {errors["username"] && (
+              <Text type="danger" className="text-xs mt-1">
+                {errors?.username?.message}
+              </Text>
+            )}
+          </div>
+
+          <div className="form-group">
+            <Text strong>Công ty:</Text>
+            <Input
+              placeholder="Nhập công ty (nếu có)"
+              {...register("company_name")}
+              className="mt-1"
+            />
+          </div>
+
+          <div className="form-group">
+            <Text strong>Số điện thoại:</Text>
+            <Input
+              placeholder="Nhập số điện thoại"
+              {...register("numberPhone", {
+                required: "Yêu cầu nhập số điện thoại",
+              })}
+              status={errors.numberPhone ? "error" : ""}
+              className="mt-1"
+            />
+            {errors["numberPhone"] && (
+              <Text type="danger" className="text-xs mt-1">
+                {errors?.numberPhone?.message}
+              </Text>
+            )}
+          </div>
+
+          <div className="form-group">
+            <Text strong>Tỉnh/Thành phố:</Text>
+            <Select
+              showSearch
+              id="city"
+              allowClear
+              placeholder="Chọn thành phố"
+              className="w-full mt-1"
+              value={selectedProvince?.index}
+              optionFilterProp="label"
+              options={provinces?.map((el, index) => ({
+                label: el?.name,
+                value: index,
+              }))}
+              onChange={(index) => {
+                setSelectedProvince({
+                  index,
+                  data: provinces[index],
+                });
+              }}
+            />
+          </div>
+
+          <div className="form-group">
+            <Text strong>Quận huyện:</Text>
+            <Select
+              showSearch
+              id="district"
+              allowClear
+              placeholder="Chọn quận huyện"
+              className="w-full mt-1"
+              value={selectedDistrict?.index}
+              optionFilterProp="label"
+              options={districts?.map((el, index) => ({
+                label: el?.name,
+                value: index,
+              }))}
+              onChange={(index) => {
+                setSelectedDistrict({
+                  index,
+                  data: districts[index],
+                });
+              }}
+            />
+          </div>
+
+          <div className="form-group">
+            <Text strong>Phường xã:</Text>
+            <Select
+              showSearch
+              id="ward"
+              allowClear
+              placeholder="Chọn phường/xã"
+              className="w-full mt-1"
+              value={selectedWard?.index}
+              optionFilterProp="label"
+              options={wards?.map((el, index) => ({
+                label: el?.name,
+                value: index,
+              }))}
+              onChange={(index) => {
+                setSelectedWard({
+                  index,
+                  data: wards[index],
+                });
+              }}
+            />
+          </div>
+
+          <div className="form-group">
+            <Text strong>Địa chỉ chi tiết:</Text>
+            <Input.TextArea
+              placeholder="Nhập địa chỉ chi tiết (số nhà, tên đường...)"
+              {...register("street", {
+                required: "Yêu cầu nhập địa chỉ",
+              })}
+              status={errors.street ? "error" : ""}
+              className="mt-1"
+              rows={3}
+            />
+            {errors["street"] && (
+              <Text type="danger" className="text-xs mt-1">
+                {errors?.street?.message}
+              </Text>
+            )}
+          </div>
+
+          <div className="form-group">
+            <Text strong>Loại địa chỉ:</Text>
+            <div className="flex gap-4 mt-2">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  value="HOME"
+                  {...register("typeAddress", {
+                    required: "Chọn loại địa chỉ",
+                  })}
+                  className="hidden peer"
+                />
+                <span className="w-5 h-5 rounded-full border-2 border-gray-500 peer-checked:border-indigo-500 peer-checked:bg-indigo-500 flex-shrink-0"></span>
+                <Space>
+                  <HomeOutlined />
+                  <span>Nhà riêng / Chung cư</span>
+                </Space>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  value="COMPANY"
+                  {...register("typeAddress", {
+                    required: "Chọn loại địa chỉ",
+                  })}
+                  className="hidden peer"
+                />
+                <span className="w-5 h-5 rounded-full border-2 border-gray-500 peer-checked:border-indigo-500 peer-checked:bg-indigo-500 flex-shrink-0"></span>
+                <Space>
+                  <BankOutlined />
+                  <span>Cơ quan / Công ty</span>
+                </Space>
+              </label>
+            </div>
+          </div>
+
+          <Card title="Tổng đơn hàng" className="mt-4 bg-gray-50">
+            <div className="flex flex-col gap-2">
+              <div className="flex justify-between">
+                <Text>Tổng sản phẩm:</Text>
+                <Text strong>{selectedItems.length} sản phẩm</Text>
+              </div>
+              
+              {totalDiscountVoucher > 0 && (
+                <div className="flex justify-between text-orange-600">
+                  <Text>Giảm giá:</Text>
+                  <Text strong>{formatMoney(totalDiscountVoucher)} vnđ</Text>
+                </div>
+              )}
+              
+              <Divider className="my-2" />
+              
+              {selectedItems.length > 0 ? (
+                <div className="flex justify-between">
+                  <Text>Tổng tiền:</Text>
+                  <Text strong className="text-xl text-primary">
+                    {formatMoney(totalOrder - totalDiscountVoucher)}đ
+                  </Text>
+                </div>
+              ) : (
+                <Text className="text-primary text-center">
+                  Vui lòng chọn sản phẩm thuê
+                </Text>
+              )}
+            </div>
+          </Card>
+
+          <Button
+            type="primary"
+            htmlType="submit"
+            size="large"
+            icon={<ShoppingCartOutlined />}
+            className="mt-3"
+            disabled={selectedItems.length === 0}
+          >
+            Hoàn thành đơn thuê
+          </Button>
+        </form>
+      </Card>
+
+      <Divider orientation="left">
+        <Space>
+          <TagOutlined />
+          <span>Mã giảm giá</span>
+        </Space>
+      </Divider>
+      
+      <div className="vouchers-container overflow-auto max-h-[400px] pr-1">
+        <div className="flex justify-between mb-2 text-sm text-gray-500">
+          <span>Áp dụng mã giảm giá</span>
+          <span>Chỉ áp dụng được 2</span>
+        </div>
+        
+        <div className="flex flex-col gap-2">
+          {vouchers.map((el, index) => (
+            <CouponCard
+              key={index}
+              data={el}
+              Unused={el?.min_order > totalOrder}
+              isAnimation={false}
+            />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+
   return (
-    <div className="w-full p-4 flex flex-col  overflow-auto min-h-full">
-      <div className="h-[75px] flex gap-2 items-center justify-between p-2 border-b border-blue-300">
-        <div className="text-2xl font-bold flex justify-between items-center w-full ">
-          <div className="flex items-center gap-2">
+    <div className="rental-update-page bg-gray-100 min-h-screen">
+      {/* Header */}
+      <header className="bg-white shadow-sm sticky top-0 z-10">
+        <div className="container mx-auto px-4 py-3 flex justify-between items-center">
+          <div className="flex items-center gap-3">
             <img
               src={logo}
               alt="logo"
-              className="w-16 object-contain"
+              className="w-12 h-12 object-contain"
               data-aos="fade"
             />
-            <div className="items-center" data-aos="fade">
-              Tạo Đơn thuê
+            <div className="flex flex-col">
+              <Title level={4} className="m-0" data-aos="fade">
+                Tạo Đơn Thuê Mới
+              </Title>
+              <Badge status="processing" color="blue" text="Đang tạo đơn" />
             </div>
           </div>
-          <Button onClick={() => navigate(paths.ADMIN.RENTAL_MANAGEMENT)}>
-            <div className="flex gap-2 items-center text-green-500 font-bold text-lg">
-              <span>Danh sách</span>
-            </div>
-          </Button>
-        </div>
-      </div>
-      <div className="flex mt-2 gap-4">
-        <div className="w-2/3 border rounded bg-white px-4 py-2">
-          <div className="flex items-center justify-between">
-            <div className="font-bold text-blue-600 p-2 border-b border-blue-600">
-              Chọn danh sách sản phẩm
-            </div>
-            <div className="flex gap-2 items-center">
-              <Select
-                defaultValue="Lọc theo loại"
-                style={{ width: 150 }}
-                onChange={(value) => setSelectedCategory(value)}
-                allowClear
-              >
-                {categories.map((el) => (
-                  <Select.Option value={el.slug}>{el.name}</Select.Option>
-                ))}
-              </Select>
-
-              <Input
-                value={keyword}
-                onChange={(e) => setKeyword(e.target.value)}
-                placeholder="Tìm kiếm bằng từ khóa"
-              ></Input>
-            </div>
-          </div>
-
-          <div className="flex flex-col gap-2 mt-2 max-h-[80vh] overflow-y-auto">
-            <div className="flex flex-col gap-2">
-              {detailRentals &&
-                detailRentals?.map((cvData, indexCV) => {
-                  {
-                    return cvData.skus.map((sku, indexSKU) => (
-                      <div className="flex items-center gap-2 border p-4 ">
-                        <Checkbox
-                          checked={sku.isChoose}
-                          onChange={(e) =>
-                            handleCheckboxChange(
-                              e.target.checked,
-                              indexCV,
-                              indexSKU,
-                            )
-                          }
-                        />
-                        <div className=" flex  gap-2  ">
-                          <img
-                            src={sku?.images?.split(",")[0]}
-                            alt=""
-                            className="w-28 h-32 rounded border object-cover"
-                          />
-                          <div className="flex items-baseline justify-center gap-6 ">
-                            <div>
-                              <div className="font-bold text-primary">
-                                {sku?.productName}
-                              </div>
-                              {sku?.attributes?.color && (
-                                <div className="flex gap-2 font-bold">
-                                  <p>Màu :</p>
-                                  <p>{sku.attributes?.color}</p>
-                                </div>
-                              )}
-                            </div>
-                            <div>
-                              {sku.attributes?.size && productData?.content && (
-                                <div className="flex gap-2 flex-wrap items-center">
-                                  <h1 className="text-blue-600 ">
-                                    Kính thước :{" "}
-                                  </h1>
-
-                                  <div className="flex gap-2">
-                                    {fillUniqueATTSkus(
-                                      productData?.content[cvData?.indexProduct]
-                                        ?.skus,
-                                      "size",
-                                    ).map((el) => (
-                                      <div
-                                        onClick={() =>
-                                          handleChangeConvertedSkus(
-                                            "size",
-                                            el.attributes.size,
-                                            cvData?.indexProduct,
-                                            indexCV,
-                                            indexSKU,
-                                          )
-                                        }
-                                        className={`py-1 border rounded px-2 
-                                                                            ${
-                                                                              sku
-                                                                                .attributes
-                                                                                .size ===
-                                                                                el
-                                                                                  .attributes
-                                                                                  .size &&
-                                                                              "shadow-md shadow-blue-600 "
-                                                                            }
-                                                                            `}
-                                      >
-                                        {el.attributes.size}
-                                      </div>
-                                    ))}
-                                  </div>
-                                </div>
-                              )}
-                              {sku.attributes?.material &&
-                                productData?.content && (
-                                  <div className="flex gap-2 flex-wrap items-center mt-2">
-                                    <h1 className="text-blue-600 ">
-                                      Chất liệu :{" "}
-                                    </h1>
-
-                                    <div className="flex gap-2">
-                                      {fillUniqueATTSkus(
-                                        productData?.content[
-                                          cvData?.indexProduct
-                                        ]?.skus,
-                                        "material",
-                                      ).map((el) => (
-                                        <div
-                                          onClick={() =>
-                                            handleChangeConvertedSkus(
-                                              "material",
-                                              el.attributes.material,
-                                              cvData?.indexProduct,
-                                              indexCV,
-                                              indexSKU,
-                                            )
-                                          }
-                                          className={`py-1 border rounded px-2 
-                                                                            ${
-                                                                              sku
-                                                                                .attributes
-                                                                                .material ===
-                                                                                el
-                                                                                  .attributes
-                                                                                  .material &&
-                                                                              "shadow-md shadow-blue-600 "
-                                                                            }
-                                                                            `}
-                                        >
-                                          {el.attributes.material}
-                                        </div>
-                                      ))}
-                                    </div>
-                                  </div>
-                                )}
-                              <div className="flex gap-2 justify-between items-center mt-2">
-                                <div className="flex gap-2 bg-white px-2 py-1 flex-1 ">
-                                  <span
-                                    className="px-2 border border-blue-600 rounded-full text-lg cursor-pointer select-none"
-                                    onClick={() =>
-                                      handleDecreaseQuantity(indexCV, indexSKU)
-                                    }
-                                  >
-                                    -
-                                  </span>
-                                  <Input
-                                    type="number"
-                                    className="w-20 text-center"
-                                    value={sku.quantity}
-                                    onChange={(e) =>
-                                      handleQuantityChange(
-                                        e.target.value,
-                                        indexCV,
-                                        indexSKU,
-                                      )
-                                    }
-                                  />
-                                  <span
-                                    className="px-2 border border-blue-600 rounded-full text-lg cursor-pointer select-none"
-                                    onClick={() =>
-                                      handleIncreaseQuantity(indexCV, indexSKU)
-                                    }
-                                  >
-                                    +
-                                  </span>
-                                </div>
-                                <div className="flex-2 flex gap-2 items-center">
-                                  <p>Giờ:</p>
-                                  <Select
-                                    className="w-20"
-                                    value={sku.hour}
-                                    onChange={(value) =>
-                                      handleHourChange(value, indexCV, indexSKU)
-                                    }
-                                    options={Array.from(
-                                      {
-                                        length: 24,
-                                      },
-                                      (_, value) => ({
-                                        label: `${value} Giờ`,
-                                        value,
-                                      }),
-                                    )}
-                                  />
-                                </div>
-
-                                <div className="flex-2 flex gap-2 items-center">
-                                  <p>Ngày:</p>
-                                  <Input
-                                    type="number"
-                                    className="w-20"
-                                    value={sku.day}
-                                    onChange={(e) =>
-                                      handleDayChange(
-                                        e.target.value,
-                                        indexCV,
-                                        indexSKU,
-                                      )
-                                    }
-                                  />
-                                </div>
-                              </div>
-
-                              <div className="flex gap-1 text-orange-700 justify-end">
-                                <p>Tổng tiền</p>
-                                <p>{formatMoney(calTotalRental(sku))} vnđ</p>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    ));
-                  }
-                })}
-            </div>
-          </div>
-        </div>
-        <div className="w-1/3 border rounded bg-white px-4 py-2 flex flex-col max-h-[90vh] overflow-auto">
-          <div className="font-bold text-primary p-2 border-b border-primary">
-            Thông tin đơn
-          </div>
-
-          <h1 className="text-lg mb-4 font-bold">Địa chỉ</h1>
-          <div className="bg-white p-4 rounded w-full">
-            <form
-              onSubmit={handleSubmit(handleRental)}
-              className="flex flex-col gap-4"
+          
+          <Space>
+            <Button
+              type="primary"
+              ghost
+              onClick={toggleMobileDrawer}
+              className="md:hidden"
             >
-              <div className="flex gap-4 items-center w-full">
-                <p className="w-32 text-nowrap">Họ và tên:</p>
-                <input
-                  type="text"
-                  placeholder="Nhập tên"
-                  {...register("username", {
-                    required: "Yêu cầu nhập tên người dùng",
-                  })}
-                  className={`w-full py-2 px-2 border rounded-lg focus:outline-none ${
-                    errors.username
-                      ? "border-red-500"
-                      : "focus:border-indigo-500"
-                  }`}
-                />
-              </div>
-              {errors["username"] && (
-                <p className="text-red-500 text-sm">
-                  {errors?.username?.message}
-                </p>
-              )}
-              <div className="flex gap-4 items-center w-full">
-                <p className="w-32 text-nowrap">Công ty:</p>
-                <input
-                  type="text"
-                  placeholder="Nhập công ty"
-                  {...register("company_name")}
-                  className="w-full py-2 px-2 border rounded-lg focus:outline-none focus:border-indigo-500"
-                />
-              </div>
+              {mobileDrawerVisible ? "Đóng" : "Thông tin đơn"}
+            </Button>
+            
+            <Button 
+              onClick={() => navigate(paths.ADMIN.RENTAL_MANAGEMENT)}
+              className="flex items-center"
+              type="default"
+            >
+              Quay lại danh sách
+            </Button>
+          </Space>
+        </div>
+      </header>
 
-              <div className="flex gap-4 items-center w-full">
-                <p className="w-32 text-nowrap">Số điện thoại:</p>
-                <input
-                  type="text"
-                  placeholder="Nhập số điện thoại"
-                  {...register("numberPhone", {
-                    required: "Yêu cầu nhập số điện thoại",
-                  })}
-                  className={`w-full py-2 px-2 border rounded-lg focus:outline-none ${
-                    errors?.numberPhone
-                      ? "border-red-500"
-                      : "focus:border-indigo-500"
-                  }`}
-                />
-              </div>
-              {errors["numberPhone"] && (
-                <p className="text-red-500 text-sm">
-                  {errors?.numberPhone?.message}
-                </p>
-              )}
-              <div className="flex gap-2 flex-col">
-                <div className="flex gap-4 items-center w-full">
-                  <p className="w-32 text-nowrap">Tỉnh/Thành phố:</p>
+      {/* Main Content */}
+      <div className="container mx-auto px-4 py-6">
+        <Row gutter={[24, 24]}>
+          {/* Product Listing Section */}
+          <Col xs={24} md={16}>
+            <Card 
+              title="Danh sách sản phẩm" 
+              className="product-list-card h-full"
+              extra={
+                <div className="flex flex-wrap gap-2">
                   <Select
-                    showSearch
-                    id="city"
+                    placeholder="Lọc theo loại"
+                    style={{ width: 150 }}
+                    onChange={(value) => setSelectedCategory(value)}
                     allowClear
-                    placeholder={"Chọn thành phố"}
-                    className={`w-full text-lg font-bold `}
-                    value={selectedProvince?.index}
-                    optionFilterProp="label"
-                    options={provinces?.map((el, index) => ({
-                      label: el?.name,
-                      value: index,
-                    }))}
-                    onChange={(index) => {
-                      setSelectedProvince({
-                        index,
-                        data: provinces[index],
-                      });
-                    }}
+                  >
+                    {categories.map((el, index) => (
+                      <Select.Option key={index} value={el.slug}>{el.name}</Select.Option>
+                    ))}
+                  </Select>
+
+                  <Input
+                    value={keyword}
+                    onChange={(e) => setKeyword(e.target.value)}
+                    placeholder="Tìm kiếm bằng từ khóa"
+                    prefix={<SearchOutlined className="text-gray-400" />}
+                    allowClear
                   />
                 </div>
-                <div className="flex gap-4 items-center w-full">
-                  <p className="w-32 text-nowrap">Quận huyện:</p>
-                  <Select
-                    showSearch
-                    id="district"
-                    allowClear
-                    placeholder={"Chọn quận huyện"}
-                    className={`w-full text-lg font-bold `}
-                    value={selectedDistrict?.index}
-                    optionFilterProp="label"
-                    options={districts?.map((el, index) => ({
-                      label: el?.name,
-                      value: index,
-                    }))}
-                    onChange={(index) => {
-                      setSelectedDistrict({
-                        index,
-                        data: districts[index],
-                      });
-                    }}
-                  />
-                </div>
-                <div className="flex gap-4 items-center w-full">
-                  <p className="w-32 text-nowrap">Phường xã:</p>
-                  <Select
-                    showSearch
-                    id="ward"
-                    allowClear
-                    placeholder={"Nhập phường"}
-                    className={`w-full text-lg font-bold `}
-                    value={selectedWard?.index}
-                    optionFilterProp="label"
-                    options={wards?.map((el, index) => ({
-                      label: el?.name,
-                      value: index,
-                    }))}
-                    onChange={(index) => {
-                      setSelectedWard({
-                        index,
-                        data: wards[index],
-                      });
-                    }}
-                  />
-                </div>
-              </div>
-              <div className="flex gap-4 items-center w-full">
-                <p className="w-32 text-nowrap">Địa chỉ:</p>
-                <textarea
-                  type="text"
-                  placeholder="Nhập địa chỉ "
-                  {...register("street", {
-                    required: "Yêu cầu nhập địa chỉ",
-                  })}
-                  className={`w-full py-2 px-2 border rounded-lg focus:outline-none ${
-                    errors?.street
-                      ? "border-red-500"
-                      : "focus:border-indigo-500"
-                  }`}
-                />
-              </div>
-              {errors["street"] && (
-                <p className="text-red-500 text-sm">
-                  {errors?.street?.message}
-                </p>
-              )}
-              <div className="flex gap-4 items-center w-full">
-                <p className="w-32 text-nowrap">Loại Địa chỉ:</p>
-                <div className="flex gap-8">
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="radio"
-                      value="HOME"
-                      {...register("typeAddress", {
-                        required: "Chọn loại địa chỉ",
-                      })}
-                      className="hidden peer"
-                    />
-                    <span className="w-5 h-5 rounded-full border-2 border-gray-500 peer-checked:border-indigo-500 peer-checked:bg-indigo-500"></span>
-                    Nhà riêng / Chung cư
-                  </label>
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="radio"
-                      value="COMPANY"
-                      {...register("typeAddress", {
-                        required: "Chọn loại địa chỉ",
-                      })}
-                      className="hidden peer"
-                    />
-                    <span className="w-5 h-5 rounded-full border-2 border-gray-500 peer-checked:border-indigo-500 peer-checked:bg-indigo-500"></span>
-                    Cơ quan / Công ty
-                  </label>
-                </div>
-              </div>
-              <div className="mt-auto">
-                {totalDiscountVoucher > 0 && (
-                  <div className="flex gap-1 text-orange-700 justify-end">
-                    <p>Đã giảm </p>
-                    <p>{formatMoney(totalDiscountVoucher)} vnđ</p>
+              }
+            >
+              <div className="product-list max-h-[70vh] overflow-y-auto pr-1">
+                {productData.isLoading ? (
+                  <div className="flex justify-center p-10">
+                    <Spin size="large" />
+                  </div>
+                ) : detailRentals.length > 0 ? (
+                  detailRentals.map((cvData, indexCV) => 
+                    cvData.skus.map((sku, indexSKU) => 
+                      renderProductItem(sku, indexCV, indexSKU, cvData)
+                    )
+                  )
+                ) : (
+                  <div className="text-center p-10">
+                    <Text type="secondary">Không tìm thấy sản phẩm</Text>
                   </div>
                 )}
-                {selectedItems.length > 0 ? (
-                  <p className="flex justify-end my-2">
-                    <span>Tổng tiền :</span>
-                    <span className="font-bold text-primary">
-                      <span>{formatMoney(totalOrder)}đ</span>
-                    </span>
-                  </p>
-                ) : (
-                  <span className="text-primary justify-end flex">
-                    Vui lòng chọn sản phẩm thuê
-                  </span>
-                )}
-
-                <Button
-                  className="flex bg-primary text-white w-full"
-                  htmlType="submit"
-                >
-                  Hoàn thành{" "}
-                </Button>
               </div>
-            </form>
-          </div>
+              
+              {productData?.content?.length > 1 && (
+                <div className="pagination-container mt-4 flex justify-center">
+                  <Pagination
+                    listLimit={[8, 16, 24, 32]}
+                    limitCurrent={limit}
+                    setLimit={setLimit}
+                    totalPages={productData?.totalPages}
+                    setPage={setPage}
+                    pageCurrent={page}
+                    totalElements={productData?.totalElements}
+                  />
+                </div>
+              )}
+            </Card>
+          </Col>
 
-          <div className="my-2 flex justify-between">
-            <p>Áp dụng mã giảm giá</p>
-            <p className="text-gray-700"> Chỉ áp dụng được 2</p>
-          </div>
-          <div className="flex flex-col gap-2 flex-1  ">
-            {vouchers.map((el) => (
-              <CouponCard
-                data={el}
-                Unused={el?.min_order > totalOrder}
-                isAnimation={false}
-              />
-            ))}
-          </div>
-        </div>
+          {/* Order Form Section - Desktop */}
+          <Col xs={0} md={8}>
+            {renderOrderForm()}
+          </Col>
+        </Row>
       </div>
 
+      {/* Mobile Drawer for Order Form */}
+      <Drawer
+        title="Thông tin đơn hàng"
+        placement="right"
+        onClose={toggleMobileDrawer}
+        open={mobileDrawerVisible}
+        width={320}
+      >
+        {renderOrderForm()}
+      </Drawer>
+
+      {/* Full Page Loading */}
       {isLoading && (
-        <HashLoader size={100} color="#b683df" className="mx-auto mt-20" />
-      )}
-      {productData?.content?.length > 1 && (
-        <div class="flex w-full justify-start p-2 ">
-          <Pagination
-            listLimit={[10, 25, 40, 100]}
-            limitCurrent={limit}
-            setLimit={setLimit}
-            totalPages={productData?.totalPages}
-            setPage={setPage}
-            pageCurrent={page}
-            totalElements={productData?.totalElements}
-          />
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
+          <HashLoader size={100} color="#b683df" />
         </div>
       )}
+
+      {/* Global styles */}
+      <style jsx global>{`
+        .product-card:hover {
+          transform: translateY(-2px);
+        }
+        
+        .vouchers-container::-webkit-scrollbar {
+          width: 5px;
+        }
+        
+        .vouchers-container::-webkit-scrollbar-thumb {
+          background-color: #d1d5db;
+          border-radius: 10px;
+        }
+        
+        .product-list::-webkit-scrollbar {
+          width: 5px;
+        }
+        
+        .product-list::-webkit-scrollbar-thumb {
+          background-color: #d1d5db;
+          border-radius: 10px;
+        }
+        
+        @media (max-width: 768px) {
+          .ant-drawer-body {
+            padding: 12px;
+          }
+        }
+      `}</style>
     </div>
   );
 }

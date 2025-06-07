@@ -1,13 +1,41 @@
 import { faker } from "@faker-js/faker";
-import { notification, Progress, Tooltip } from "antd";
+import { 
+  notification, 
+  Progress, 
+  Tooltip, 
+  Card, 
+  Button, 
+  Tag, 
+  Avatar, 
+  Typography, 
+  Divider, 
+  Input, 
+  Space,
+  Image
+} from "antd";
+import {
+  CameraOutlined,
+  DeleteOutlined,
+  SendOutlined,
+  LikeOutlined, 
+  LikeFilled,
+  DislikeOutlined, 
+  DislikeFilled, 
+  SmileOutlined,
+  HeartOutlined,
+  HeartFilled,
+  CommentOutlined,
+  MoreOutlined,
+  FireOutlined,
+  UserOutlined
+} from '@ant-design/icons';
 import TextArea from "antd/es/input/TextArea";
 import useFileUpload from "hooks/useUpload";
 import defaultPreviewImage from "assets/images/admin/defaultPreviewProduct.png";
-import moment, { duration } from "moment";
+import moment from "moment";
 import "moment/locale/vi";
 import { useEffect, useState } from "react";
 import { useSelector } from "react-redux";
-import Icons from "utils/icons";
 import { replyQuestion } from "apis/replyQuestion.api";
 import {
   createReactQuestion,
@@ -16,6 +44,8 @@ import {
 import ReplyItem from "./ReplyItem";
 import renderReply from "./renderReply";
 moment.locale("vi");
+
+const { Title, Text, Paragraph } = Typography;
 
 function Question({
   data,
@@ -172,33 +202,28 @@ function Question({
 
   const ImageUploadPreview = ({ src, index }) => {
     return (
-      <div className="relative">
-        <div
-          className="top-0 right-0 absolute cursor-pointer  p-1 bg-white"
-          onClick={() =>
-            setUploadUrls((prev) => prev.filter((el) => el != src))
-          }
-        >
-          <Icons.MdDeleteForever color="red" />
-        </div>
+      <div className="relative rounded overflow-hidden border border-gray-200">
+        <Button
+          type="text"
+          danger
+          icon={<DeleteOutlined />}
+          size="small"
+          className="absolute top-0 right-0 bg-white shadow-sm z-10"
+          onClick={() => setUploadUrls((prev) => prev.filter((el) => el !== src))}
+        />
         <img
           src={src || defaultPreviewImage}
           alt={src}
           className="w-24 h-20 object-cover"
         />
         {uploadProgress[index] !== undefined && uploadProgress[index] > 0 && (
-          <div
-            className={
-              "absolute top-0 left-0 right-0 bottom-0 bg-slate-200 bg-opacity-70 flex items-center justify-center transition-opacity duration-300"
-            }
-          >
-            <span className="text-white p-2 cursor-pointer">
-              <Progress
-                type="circle"
-                percent={uploadProgress[index]}
-                size={32}
-              />
-            </span>
+          <div className="absolute top-0 left-0 right-0 bottom-0 bg-black bg-opacity-40 flex items-center justify-center transition-all duration-300">
+            <Progress
+              type="circle"
+              percent={uploadProgress[index]}
+              size={32}
+              strokeColor="#1890ff"
+            />
           </div>
         )}
       </div>
@@ -211,6 +236,7 @@ function Question({
     if (filesReceived.length > 7) {
       notification.error({
         message: "Chỉ chọn tối đa 7 ảnh!",
+        placement: "top"
       });
       return;
     }
@@ -237,395 +263,177 @@ function Question({
     setUploadProgress([]);
   };
 
+  const renderReactionButton = (type, icon, activeIcon, color, count) => {
+    const isActive = userReacted?.reactionType === type;
+    const Icon = isActive ? activeIcon : icon;
+    
+    return (
+      <Button
+        type={isActive ? "primary" : "default"}
+        ghost={isActive}
+        icon={<Icon />}
+        size="small"
+        loading={loadingData.reaction === type}
+        onClick={() => handleReactQuestion(type)}
+        style={isActive ? { borderColor: color, color } : {}}
+      >
+        {count || ""}
+      </Button>
+    );
+  };
+
   return (
-    <div key={data?.id} className="bg-white rounded pb-2">
-      <div className="flex gap-4 items-center bg-blue-100 px-4 rounded py-2">
-        <div>
-          <img
+    <Card hoverable className="overflow-hidden">
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-3">
+          <Avatar 
             src={data?.postBy?.avatar || faker.image.avatar()}
-            className="w-12 h-12 rounded-full"
-            alt={data?.postBy?.username}
+            icon={<UserOutlined />}
+            size="large"
           />
-        </div>
-        <div className="flex flex-col gap-1">
-          <div className="font-bold text-lg">{data?.postBy?.username}</div>
-          <div className="text-gray-500">
-            {moment(data?.createdAt).fromNow()}
+          <div>
+            <Text strong className="block">
+              {userInfo?.data?.id === data?.postBy?.id
+                ? "Bạn"
+                : data?.postBy?.username || "Người dùng"}
+            </Text>
+            <Text type="secondary" className="text-xs">
+              {moment(data?.createdAt).fromNow()}
+            </Text>
           </div>
         </div>
+        <Button type="text" icon={<MoreOutlined />} />
       </div>
-
-      <div className="flex gap-2">
-        <div className="flex-1">
-          <div className="px-2 py-4 text-lg">{data?.questionText}</div>
-
-          {data?.images.length > 0 && (
-            <div className="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-4 gap-2 px-2">
-              {data?.images?.split(",").map((img, index) => (
-                <div key={index} className="flex justify-center items-center">
-                  <img
-                    src={img}
-                    alt={img}
-                    className="object-cover w-full h-40 rounded-md"
-                  />
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-        <div className="flex-1 overflow-auto border-l border-b p-2 max-h-96 flex flex-col gap-2">
-          {data.replies?.length > 0 ? (
-            renderReply(data.replies, data)
-          ) : (
-            <div className="flex justify-center items-center">
-              <div className="text-gray-500 text-lg">Chưa có bình luận nào</div>
-            </div>
-          )}
-        </div>
-      </div>
-
-      <div className="flex justify-between items-center px-4">
-        <div className="flex gap-6 px-4 py-2 text-gray-600 items-center">
-          {loadingData["reaction"] === "LIKE" ? (
-            <Icons.AiOutlineLoading3Quarters
-              color="blue"
-              className="animate-spin"
-            />
-          ) : (
-            <Tooltip
-              placement="top"
-              title={
-                <>
-                  {reactions["LIKE"]?.length > 0 ? (
-                    <div className="flex gap-2 flex-wrap">
-                      {reactions["LIKE"]?.map((el) => (
-                        <Tooltip title={el.postBy?.username}>
-                          <img
-                            src={el.postBy?.avatar || faker.image.avatar()}
-                            className="w-8 h-8 rounded-full"
-                            alt="not found"
-                          />
-                        </Tooltip>
-                      ))}
-                    </div>
-                  ) : (
-                    <div>Bạn muốn bày tỏ cảm xúc này ?</div>
-                  )}
-                </>
-              }
-            >
-              <button
-                className="flex items-center gap-1 hover:text-blue-500"
-                onClick={() => handleReactQuestion("LIKE")}
-              >
-                <span className="transition-transform transform hover:scale-150 hover:rotate-6">
-                  👍
-                </span>
-                <span
-                  className={`${
-                    userReacted?.reactionType === "LIKE" &&
-                    "font-bold text-blue-600"
-                  }`}
-                >
-                  {reactions["LIKE"]?.length || 0}
-                </span>
-              </button>
-            </Tooltip>
-          )}
-
-          {loadingData["reaction"] === "DISLIKE" ? (
-            <Icons.AiOutlineLoading3Quarters
-              color="blue"
-              className="animate-spin"
-            />
-          ) : (
-            <Tooltip
-              placement="top"
-              title={
-                <>
-                  {reactions["DISLIKE"]?.length > 0 ? (
-                    <div className="flex gap-2 flex-wrap">
-                      {reactions["DISLIKE"]?.map((el) => (
-                        <Tooltip title={el.postBy?.username}>
-                          <img
-                            src={el.postBy?.avatar || faker.image.avatar()}
-                            className="w-8 h-8 rounded-full"
-                            alt="not found"
-                          />
-                        </Tooltip>
-                      ))}
-                    </div>
-                  ) : (
-                    <div>Bạn muốn bày tỏ cảm xúc này ?</div>
-                  )}
-                </>
-              }
-            >
-              <button
-                className="flex items-center gap-1 hover:text-red-500"
-                onClick={() => handleReactQuestion("DISLIKE")}
-              >
-                <span className="transition-transform transform hover:scale-150 hover:rotate-6">
-                  👎
-                </span>
-                <span
-                  className={`${
-                    userReacted?.reactionType === "DISLIKE" &&
-                    "font-bold text-blue-600"
-                  }`}
-                >
-                  {reactions["DISLIKE"]?.length || 0}
-                </span>
-              </button>
-            </Tooltip>
-          )}
-
-          {loadingData["reaction"] === "LOVE" ? (
-            <Icons.AiOutlineLoading3Quarters
-              color="blue"
-              className="animate-spin"
-            />
-          ) : (
-            <Tooltip
-              placement="top"
-              title={
-                <>
-                  {reactions["LOVE"]?.length > 0 ? (
-                    <div className="flex gap-2 flex-wrap">
-                      {reactions["LOVE"]?.map((el) => (
-                        <Tooltip title={el.postBy?.username}>
-                          <img
-                            src={el.postBy?.avatar || faker.image.avatar()}
-                            className="w-8 h-8 rounded-full"
-                            alt="not found"
-                          />
-                        </Tooltip>
-                      ))}
-                    </div>
-                  ) : (
-                    <div>Bạn muốn bày tỏ cảm xúc này ?</div>
-                  )}
-                </>
-              }
-            >
-              <button
-                className="flex items-center gap-1 hover:text-yellow-500"
-                onClick={() => handleReactQuestion("LOVE")}
-              >
-                <span className="transition-transform transform hover:scale-150 hover:rotate-6">
-                  ❤️
-                </span>
-                <span
-                  className={`${
-                    userReacted?.reactionType === "LOVE" &&
-                    "font-bold text-blue-600"
-                  }`}
-                >
-                  {reactions["LOVE"]?.length || 0}
-                </span>
-              </button>
-            </Tooltip>
-          )}
-
-          {loadingData["reaction"] === "SAD" ? (
-            <Icons.AiOutlineLoading3Quarters
-              color="blue"
-              className="animate-spin"
-            />
-          ) : (
-            <Tooltip
-              placement="top"
-              title={
-                <>
-                  {reactions["SAD"]?.length > 0 ? (
-                    <div className="flex gap-2 flex-wrap">
-                      {reactions["SAD"]?.map((el) => (
-                        <Tooltip title={el.postBy?.username}>
-                          <img
-                            src={el.postBy?.avatar || faker.image.avatar()}
-                            className="w-8 h-8 rounded-full"
-                            alt="not found"
-                          />
-                        </Tooltip>
-                      ))}
-                    </div>
-                  ) : (
-                    <div>Bạn muốn bày tỏ cảm xúc này ?</div>
-                  )}
-                </>
-              }
-            >
-              <button
-                className="flex items-center gap-1 hover:text-yellow-500"
-                onClick={() => handleReactQuestion("SAD")}
-              >
-                <span className="transition-transform transform hover:scale-150 hover:rotate-6">
-                  😢
-                </span>
-                <span
-                  className={`${
-                    userReacted?.reactionType === "SAD" &&
-                    "font-bold text-blue-600"
-                  }`}
-                >
-                  {reactions["SAD"]?.length || 0}
-                </span>
-              </button>
-            </Tooltip>
-          )}
-
-          {loadingData["reaction"] === "ANGRY" ? (
-            <Icons.AiOutlineLoading3Quarters
-              color="blue"
-              className="animate-spin"
-            />
-          ) : (
-            <Tooltip
-              placement="top"
-              title={
-                <>
-                  {reactions["ANGRY"]?.length > 0 ? (
-                    <div className="flex gap-2 flex-wrap">
-                      {reactions["ANGRY"]?.map((el) => (
-                        <Tooltip title={el.postBy?.username}>
-                          <img
-                            src={el.postBy?.avatar || faker.image.avatar()}
-                            className="w-8 h-8 rounded-full"
-                            alt="not found"
-                          />
-                        </Tooltip>
-                      ))}
-                    </div>
-                  ) : (
-                    <div>Bạn muốn bày tỏ cảm xúc này ?</div>
-                  )}
-                </>
-              }
-            >
-              <button
-                className="flex items-center gap-1 hover:text-yellow-500"
-                onClick={() => handleReactQuestion("ANGRY")}
-              >
-                <span className="transition-transform transform hover:scale-150 hover:rotate-6">
-                  😠
-                </span>
-                <span
-                  className={`${
-                    userReacted?.reactionType === "ANGRY" &&
-                    "font-bold text-blue-600"
-                  }`}
-                >
-                  {reactions["ANGRY"]?.length || 0}
-                </span>
-              </button>
-            </Tooltip>
-          )}
-        </div>
-        <div
-          className={`font-bold text-lg flex items-center gap-2 cursor-pointer ${
-            index === indexShowComment ? "text-blue-600" : "text-gray-600 "
-          }`}
-          onClick={() => {
-            if (!isLogged) {
-              notification.warning({
-                message: "Vui lòng đăng nhập để tham bình luận...",
-                duration: 3,
-                placement: "top",
-              });
-              return;
-            }
-            if (index === indexShowComment) setIndexShowComment(-1);
-            else setIndexShowComment(index);
-          }}
-        >
-          {index === indexShowComment ? (
-            <Icons.FaChevronDown />
-          ) : (
-            <Icons.FaArrowLeft />
-          )}
-          <div>Bình luận </div>
-        </div>
-      </div>
-
-      {indexShowComment == index && (
-        <div className="px-4 py-4 border-t mt-2 relative">
-          {uploadUrls.length > 0 && (
-            <div className="flex gap-4 bg-gray-400 absolute top-[-40px] z-30 right-[10%] border rounded p-2">
-              {uploadUrls.map((link, index) => (
-                <div className="relative bg-white p-1 rounded">
-                  <ImageUploadPreview src={link} index={index} />
-                </div>
-              ))}
-            </div>
-          )}
-          <div className="font-semibold text-sm mb-2 w-full">Bình luận:</div>
-          <div className="flex flex-col gap-2">
-            {data?.comments?.map((comment, index) => (
-              <div key={index} className="flex gap-4">
-                <div>
-                  <img
-                    src={comment?.user?.avatar || faker.image.avatar()}
-                    className="w-8 h-8 rounded-full"
-                    alt={comment?.user?.username}
-                  />
-                </div>
-                <div className="flex flex-col gap-1">
-                  <div className="font-bold text-sm">
-                    {comment?.user?.username}
-                  </div>
-                  <div className="text-gray-600 text-sm">
-                    {comment?.content}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <div className="mt-4 ">
-            <TextArea
-              value={commentText}
-              onChange={(e) => setCommentText(e.target.value)}
-              className="w-full px-4 py-2 border rounded-md"
-              placeholder="Thêm bình luận..."
-            />
-            <div className="flex justify-between mt-2 items-center">
-              <div className="p-2">
-                <input
-                  id={`file-input`}
-                  className="hidden"
-                  onChange={(e) => handleUpload(e)}
-                  multiple
-                  type="file"
-                  accept={"image/*"}
-                />
-                <label htmlFor={`file-input`}>
-                  <Tooltip title={"Tải ảnh lên"}>
-                    <Icons.FaCameraRetro
-                      color="blue"
-                      size={24}
-                      className="cursor-pointer "
+      
+      <div className="mb-4">
+        <Paragraph>{data?.questionText}</Paragraph>
+        
+        {data?.images?.length > 0 && (
+          <div className="mt-2">
+            <Image.PreviewGroup>
+              <div className="flex flex-wrap gap-2">
+                {data?.images?.split(",").map((img, imgIndex) => (
+                  <div key={imgIndex} className="w-24 h-24 overflow-hidden rounded border border-gray-200">
+                    <Image
+                      src={img}
+                      alt={`Question image ${imgIndex}`}
+                      className="object-cover"
+                      style={{ width: '100%', height: '100%' }}
                     />
-                  </Tooltip>
-                </label>
+                  </div>
+                ))}
               </div>
-              <button
-                className="mt-2 px-4 py-2 bg-blue-500 text-white rounded-md "
-                onClick={() => {
-                  if (loadingData.comment) return;
-                  handleComment();
-                }}
-              >
-                {loadingData.comment ? (
-                  <Icons.AiOutlineLoading3Quarters className="animate-spin" />
-                ) : (
-                  <span>Gửi bình luận</span>
-                )}
-              </button>
+            </Image.PreviewGroup>
+          </div>
+        )}
+      </div>
+      
+      <div className="flex flex-wrap items-center gap-2 my-3">
+        <Space.Compact>
+          {renderReactionButton(
+            "like",
+            LikeOutlined,
+            LikeFilled,
+            "#1890ff",
+            reactions.like?.length || ""
+          )}
+          
+          {renderReactionButton(
+            "dislike",
+            DislikeOutlined,
+            DislikeFilled,
+            "#ff4d4f",
+            reactions.dislike?.length || ""
+          )}
+          
+          {renderReactionButton(
+            "heart",
+            HeartOutlined,
+            HeartFilled,
+            "#eb2f96",
+            reactions.heart?.length || ""
+          )}
+          
+          {renderReactionButton(
+            "smile",
+            SmileOutlined,
+            SmileOutlined,
+            "#faad14",
+            reactions.smile?.length || ""
+          )}
+        </Space.Compact>
+        
+        <Button
+          type={indexShowComment === index ? "primary" : "default"}
+          icon={<CommentOutlined />}
+          size="small"
+          onClick={() => setIndexShowComment(indexShowComment === index ? null : index)}
+        >
+          {data?.replies?.length || ""} Trả lời
+        </Button>
+      </div>
+      
+      {indexShowComment === index && (
+        <div className="mt-4 border-t pt-4">
+          <div className="flex gap-3 mb-4">
+            <Avatar src={faker.image.avatar()} icon={<UserOutlined />} />
+            <div className="flex-1">
+              <TextArea
+                value={commentText}
+                onChange={(e) => setCommentText(e.target.value)}
+                placeholder="Nhập câu trả lời của bạn..."
+                autoSize={{ minRows: 2, maxRows: 6 }}
+                className="mb-3"
+              />
+              
+              {uploadUrls.length > 0 && (
+                <div className="flex flex-wrap gap-3 mb-3 border-t border-b py-3 bg-gray-50">
+                  {uploadUrls.map((link, index) => (
+                    <ImageUploadPreview key={index} src={link} index={index} />
+                  ))}
+                </div>
+              )}
+              
+              <div className="flex justify-between">
+                <div>
+                  <input
+                    id={`file-input-comment-${data.id}`}
+                    className="hidden"
+                    onChange={(e) => handleUpload(e)}
+                    multiple
+                    type="file"
+                    accept="image/*"
+                  />
+                  <Tooltip title="Tải ảnh lên">
+                    <Button 
+                      icon={<CameraOutlined />}
+                      onClick={() => document.getElementById(`file-input-comment-${data.id}`).click()}
+                    >
+                      Thêm ảnh
+                    </Button>
+                  </Tooltip>
+                </div>
+                
+                <Button 
+                  type="primary" 
+                  icon={<SendOutlined />}
+                  onClick={handleComment}
+                  loading={loadingData.comment}
+                >
+                  Gửi trả lời
+                </Button>
+              </div>
             </div>
           </div>
+          
+          {data?.replies?.length > 0 && (
+            <div className="ml-3 border-l-2 border-blue-100 pl-4 space-y-4">
+              {renderReply(data?.replies, data)}
+            </div>
+          )}
         </div>
       )}
-    </div>
+    </Card>
   );
 }
 

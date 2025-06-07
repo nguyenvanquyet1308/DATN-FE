@@ -1,7 +1,6 @@
-import { Modal, notification, Tooltip } from "antd";
+import { Modal, notification, Tooltip, Table, Card, Typography, Space, Button as AntButton, Popconfirm, Input } from "antd";
 import { deleteProductBrand, getProductBrands } from "apis/productBrand.api";
 import { deleteProductCate } from "apis/productCate.api";
-import Button from "components/Button";
 import DOMPurify from "dompurify";
 import { useEffect, useState } from "react";
 import { useDispatch } from "react-redux";
@@ -11,6 +10,9 @@ import Pagination from "../components/Pagination";
 import ProductBrandForm from "./ProductBrandForm";
 import moment from "moment";
 import logo from "assets/images/logo.jpg";
+import { SearchOutlined, PlusOutlined, EditOutlined, DeleteOutlined, DownOutlined, RightOutlined } from '@ant-design/icons';
+
+const { Title, Text } = Typography;
 
 function ProductBrandManager() {
   const dispatch = useDispatch();
@@ -22,6 +24,7 @@ function ProductBrandManager() {
   const [brands, setBrands] = useState([]);
   const [dataEdit, setDataEdit] = useState(null);
   const [isShowModal, setIsShowModal] = useState(false);
+  const [searchText, setSearchText] = useState("");
 
   const fetchBrands = async () => {
     dispatch(changeLoading());
@@ -48,7 +51,7 @@ function ProductBrandManager() {
     dispatch(changeLoading());
     try {
       await deleteProductBrand(id);
-      notification.success({ message: "Delete Successfully" });
+      notification.success({ message: "Xóa thành công" });
       fetchBrands();
     } catch (error) {
       const message =
@@ -69,13 +72,94 @@ function ProductBrandManager() {
     setIsShowModal(true);
   };
 
+  // Filter data based on search text
+  const filteredData = brands.filter(brand => 
+    !searchText || 
+    brand.name?.toLowerCase().includes(searchText.toLowerCase()) || 
+    brand.slug?.toLowerCase().includes(searchText.toLowerCase())
+  );
+
+  // Table columns definition
+  const columns = [
+    {
+      title: '#',
+      dataIndex: 'index',
+      key: 'index',
+      render: (_, __, index) => index + 1,
+      width: 70,
+    },
+    {
+      title: 'Tên thương hiệu',
+      dataIndex: 'name',
+      key: 'name',
+      render: (text, record) => (
+        <div className="flex items-center">
+          {record.image && (
+            <Tooltip title={<img src={record.image} alt={text} className="max-h-40" />}>
+              <img 
+                src={record.image} 
+                alt={text} 
+                className="w-10 h-10 object-contain mr-3 rounded-md border border-gray-200"
+              />
+            </Tooltip>
+          )}
+          <Text strong>{text}</Text>
+        </div>
+      ),
+    },
+    {
+      title: 'Slug',
+      dataIndex: 'slug',
+      key: 'slug',
+    },
+    {
+      title: 'Cập nhật vào',
+      dataIndex: 'updatedAt',
+      key: 'updatedAt',
+      render: (date) => date ? moment(date).format("DD/MM/YYYY") : 'N/A',
+    },
+    {
+      title: 'Hành động',
+      key: 'action',
+      render: (_, record) => (
+        <Space size="middle">
+          <AntButton 
+            type="primary" 
+            icon={<EditOutlined />} 
+            onClick={() => openFormUpdate(record)}
+            className="flex items-center"
+          >
+            Sửa
+          </AntButton>
+          <Popconfirm
+            title="Bạn có chắc muốn xóa thương hiệu này?"
+            onConfirm={() => handleDelete(record.id)}
+            okText="Xóa"
+            cancelText="Hủy"
+            placement="left"
+          >
+            <AntButton 
+              danger 
+              icon={<DeleteOutlined />}
+              className="flex items-center"
+            >
+              Xóa
+            </AntButton>
+          </Popconfirm>
+        </Space>
+      ),
+    },
+  ];
+
   return (
-    <div className="w-full p-4 flex flex-col  overflow-auto min-h-full">
+    <div className="bg-gray-50 min-h-screen p-6">
       <Modal
+        title={dataEdit ? "Cập nhật thương hiệu" : "Thêm thương hiệu mới"}
         width={800}
         open={isShowModal}
         onCancel={() => setIsShowModal(false)}
-        footer={false}
+        footer={null}
+        destroyOnClose
       >
         <ProductBrandForm
           closeModal={() => setIsShowModal(false)}
@@ -83,221 +167,74 @@ function ProductBrandManager() {
           brandCurrent={dataEdit}
         />
       </Modal>
-      <div className="h-[75px] flex gap-2 items-center justify-between p-4 border-b border-blue-300">
-        <div className="text-2xl font-bold flex justify-between items-center w-full ">
-          <img
-            src={logo}
-            alt="logo"
-            className="w-16 object-contain"
-            data-aos="fade"
-          />
-          <div data-aos="fade-up">Thương hiệu sản phẩm </div>
-          <Button
-            iconBefore={<Icons.FaPlus />}
-            name="Create"
-            handleClick={() => openFormUpdate()}
-            style={
-              "border rounded bg-green-600 cursor-pointer px-4 py-2 text-white text-sm"
-            }
-          />
+
+      <Card className="shadow-sm">
+        <div className="flex flex-col md:flex-row justify-between items-center mb-6">
+          <div className="flex items-center gap-4 mb-4 md:mb-0">
+            <img
+              src={logo}
+              alt="logo"
+              className="w-12 h-12 object-contain"
+            />
+            <Title level={3} className="m-0">Quản lý thương hiệu</Title>
+          </div>
+          
+          <div className="flex gap-4 w-full md:w-auto">
+            <Input 
+              placeholder="Tìm kiếm theo tên hoặc slug" 
+              prefix={<SearchOutlined />}
+              value={searchText}
+              onChange={(e) => setSearchText(e.target.value)}
+              className="md:w-64"
+              allowClear
+            />
+            <AntButton
+              type="primary"
+              icon={<PlusOutlined />}
+              onClick={() => openFormUpdate()}
+              className="flex items-center bg-green-600 hover:bg-green-700"
+            >
+              Thêm mới
+            </AntButton>
+          </div>
         </div>
 
-        {/* <div className="flex gap-4">
-                    <div className="border border-main p-2 rounded h-full flex flex-col gap-2 ">
-                        <span className="text-white">Search By Category :</span>
-                        <select
-                            name="sort"
-                            id=""
-                            className="w-full text-black"
-                            onChange={(e) => {
-                                if (e.target.value === "all") {
-                                    const { category, prevParams } = params;
-                                    setParams(prevParams);
-                                    return;
-                                }
-                                handleFilter("category", e.target.value);
-                            }}
-                        >
-                            <option className=" p-2" value="all">
-                                all categories
-                            </option>
-                            {categories?.data?.map((el) => (
-                                <option
-                                    className=" p-2"
-                                    key={el?.title}
-                                    value={el?.title}
-                                >
-                                    {el?.title}
-                                </option>
-                            ))}
-                        </select>
-                    </div>
-                </div> */}
-      </div>
-      <div className="p-4">
-        {/* <div className="flex justify-around gap-2 items-center h-[15vh]  text-black p-2">
-                    <div className="border border-main p-2 rounded h-full flex flex-col gap-2 ">
-                        <span className="text-white">SORT BY :</span>
-                        <select
-                            name="sort"
-                            id=""
-                            onChange={(e) =>
-                                handleFilter("sort", e.target.value)
-                            }
-                            className="w-full text-black"
-                        >
-                            <option className=" p-2" value="" disabled>
-                                Option
-                            </option>
-                            <option className=" p-2" value="price">
-                                Low To High Price
-                            </option>
-                            <option className=" p-2" value="-price">
-                                High To Low Price
-                            </option>
-                            <option className=" p-2" value="-totalRatings">
-                                Appreciate
-                            </option>
-                            <option className=" p-2" value="-sold">
-                                Most Purchases
-                            </option>
-                            <option className=" p-2" value="-quantity">
-                                High To Low Quantity
-                            </option>
-                            <option className=" p-2" value="quantity">
-                                Low To Hight Quantity
-                            </option>
-                        </select>
-                    </div>
-                    <div className="border border-main p-4 rounded h-full">
-                        <span className="text-white">Filter Price :</span>
-                        <div className="flex gap-1">
-                            <input
-                                type="number"
-                                placeholder="Price From"
-                                onChange={(e) =>
-                                    handleFilter("priceFrom", e.target.value)
-                                }
-                                className="p-2  outline-main"
-                            />
-                            <input
-                                type="number"
-                                placeholder="Price To"
-                                onChange={(e) =>
-                                    handleFilter("priceTo", e.target.value)
-                                }
-                                className="p-2  outline-main"
-                            />
-                        </div>
-                    </div>
-                    <div className="border border-main p-4 rounded h-full flex justify-around items-center gap-2">
-                        <input
-                            type="text"
-                            value={keyword}
-                            placeholder="search products by key ..."
-                            onChange={(e) => setKeyword(e.target.value)}
-                            className="p-2 flex-2 outline-main"
-                        />
-                        <button
-                            className="text-white flex-1 cursor-pointer border text-sm  bg-green-600 "
-                            onClick={() => navigate(path.ADMIN.UPDATE_PRODUCT)}
-                        >
-                            Create Product
-                        </button>
-                    </div>
-                </div> */}
-      </div>
-      <div className="flex flex-col border justify-between">
-        <table
-          data-aos="zoom-in"
-          className="table-auto rounded p-2 bg-slate-50 mb-1 text-left w-full border-separate  transition-all duration-300 ease-in"
-        >
-          <thead className="font-bold text-white text-[13px] text-center border border-blue-300">
-            <tr>
-              <th className="px-4 py-2 bg-gradient-to-r from-primary to-secondary">
-                #
-              </th>
-              <th className="px-4 py-2 bg-gradient-to-r from-primary to-secondary">
-                Tên thương hiệu
-              </th>
-              <th className="px-4 py-2 bg-gradient-to-r from-primary to-secondary">
-                Slug
-              </th>
-              <th className="px-4 py-2 bg-gradient-to-r from-primary to-secondary">
-                Cập nhật vào
-              </th>
-              <th className="px-4 py-2 bg-gradient-to-r from-primary to-secondary">
-                Hành động
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {brands.map((e, index) => (
-              <Tooltip
-                title={
-                  e?.image ? (
-                    <img
-                      src={e?.image}
-                      alt={e?.name}
-                      className="w-[240px] h-auto rounded"
-                    />
-                  ) : (
-                    <span>No image available</span>
-                  )
-                }
-                placement="top"
-              >
-                <tr key={e.id} className=" relative ">
-                  <td className="px-2 py-1 border border-slate-500 text-center text-lg font-bold">
-                    {index + 1}
-                  </td>
-                  <td className="px-2 py-1 border border-slate-500  text-lg font-bold">
-                    <span>{e?.name}</span>
-                  </td>
-                  <td className="px-2 py-1 border border-slate-500 text-lg font-bold">
-                    <span>{e?.slug}</span>
-                  </td>
-                  <td className="px-2 py-1 border border-slate-500 text-lg font-bold text-center">
-                    {e?.updatedAt ? (
-                      <span>{moment(e?.updatedAt).format("DD/MM/YYYY")}</span>
-                    ) : (
-                      <span>N/A</span>
-                    )}
-                  </td>
-                  {/* <td className="px-2 py-1 border border-slate-500">
-                                        <span
-                                            className="line-clamp-4"
-                                            dangerouslySetInnerHTML={{
-                                                __html: DOMPurify.sanitize(
-                                                    e?.description
-                                                ),
-                                            }}
-                                        ></span>
-                                    </td> */}
-                  <td className="px-1 py-2 h-full flex  gap-4 items-center justify-center border border-slate-500">
-                    <Button
-                      name={"Edit"}
-                      handleClick={() => openFormUpdate(e)}
-                      style={
-                        "border rounded bg-blue-600 cursor-pointer px-4 py-2 text-white text-sm"
-                      }
-                      iconBefore={<Icons.FaEdit />}
-                    />
-                    <Button
-                      name={"Delete"}
-                      style={
-                        "border rounded bg-red-600 cursor-pointer px-4 py-2 text-white text-sm"
-                      }
-                      handleClick={() => handleDelete(e?.id)}
-                      iconBefore={<Icons.MdDeleteForever />}
-                    />
-                  </td>
-                </tr>
-              </Tooltip>
-            ))}
-          </tbody>
-        </table>
-        <div class="flex w-full justify-end p-2 ">
+        <Table
+          columns={columns}
+          dataSource={filteredData}
+          rowKey="id"
+          pagination={false}
+          bordered
+          className="brand-table"
+          size="middle"
+          loading={brands.length === 0}
+          expandable={{
+            expandedRowRender: record => (
+              <div className="p-3">
+                <Text strong>Mô tả:</Text>
+                {record.description ? (
+                  <div 
+                    className="mt-2 p-3 bg-gray-50 rounded border"
+                    dangerouslySetInnerHTML={{
+                      __html: DOMPurify.sanitize(record.description)
+                    }}
+                  />
+                ) : (
+                  <Text type="secondary" italic className="ml-2">Không có mô tả</Text>
+                )}
+              </div>
+            ),
+            expandRowByClick: true,
+            expandIcon: ({ expanded, onExpand, record }) => 
+              record.description ? (
+                expanded ? 
+                <AntButton type="text" icon={<DownOutlined />} onClick={e => onExpand(record, e)} /> : 
+                <AntButton type="text" icon={<RightOutlined />} onClick={e => onExpand(record, e)} />
+              ) : null
+          }}
+        />
+        
+        <div className="flex justify-end mt-4">
           <Pagination
             listLimit={[10, 25, 40, 100]}
             limitCurrent={limit}
@@ -308,7 +245,28 @@ function ProductBrandManager() {
             totalElements={totalElements}
           />
         </div>
-      </div>
+      </Card>
+
+      <style jsx global>{`
+        .brand-table .ant-table-cell {
+          vertical-align: middle;
+        }
+        
+        .ant-table-row:hover {
+          background-color: #f0f7ff !important;
+          transition: all 0.3s ease;
+        }
+        
+        .ant-table-row-expand-icon-cell {
+          padding: 0 !important;
+        }
+        
+        @media (max-width: 768px) {
+          .ant-table {
+            overflow-x: auto;
+          }
+        }
+      `}</style>
     </div>
   );
 }

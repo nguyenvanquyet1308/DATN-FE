@@ -1,11 +1,16 @@
-import { notification } from "antd";
-import {
-  getOrderStatisticDaily,
-  getOrderStatisticStatus,
-  getOrderStatisticTotal,
-} from "apis/order.api";
-import { useEffect, useState } from "react";
-import React, { PureComponent } from "react";
+import React, { useEffect, useState } from "react";
+import { 
+  Card, 
+  Row, 
+  Col, 
+  Statistic, 
+  notification, 
+  Typography, 
+  Select, 
+  Button, 
+  Space, 
+  Divider 
+} from "antd";
 import {
   BarChart,
   Bar,
@@ -16,30 +21,39 @@ import {
   CartesianGrid,
   Tooltip,
 } from "recharts";
+import {
+  getOrderStatisticDaily,
+  getOrderStatisticStatus,
+  getOrderStatisticTotal,
+} from "apis/order.api";
+
+const { Title, Text } = Typography;
+const { Option } = Select;
 
 function OrderStatistic() {
   const [dataGeneral, setDataGeneral] = useState({});
   const [totalData, setTotalData] = useState({});
-  const [dataChar, setDataChar] = useState([]);
+  const [chartData, setChartData] = useState([]);
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
 
   const fetchDaily = async () => {
     try {
-      const dataChar = await getOrderStatisticDaily({
+      const response = await getOrderStatisticDaily({
         month: selectedMonth,
         year: selectedYear,
       });
 
-      const chartData = Object.entries(dataChar || {}).map(([key, value]) => ({
+      const processedData = Object.entries(response || {}).map(([key, value]) => ({
         name: `Ngày ${key}`,
         order: value,
       }));
 
-      setDataChar(chartData);
+      setChartData(processedData);
     } catch (error) {
       notification.warning({
-        message: error.message,
+        message: "Lỗi khi tải dữ liệu thống kê",
+        description: error.message,
         duration: 2,
         placement: "top",
       });
@@ -50,9 +64,9 @@ function OrderStatistic() {
     fetchDaily();
   }, [selectedMonth, selectedYear]);
 
-  const handleFetchGeneral = async () => {
+  const handleFetchGeneralData = async () => {
     try {
-      const [statusData, totalData, dataChar] = await Promise.all([
+      const [statusData, totalDataResponse, dailyData] = await Promise.all([
         getOrderStatisticStatus(),
         getOrderStatisticTotal(),
         getOrderStatisticDaily({
@@ -60,18 +74,20 @@ function OrderStatistic() {
           year: selectedYear,
         }),
       ]);
+      
       setDataGeneral(statusData);
-      setTotalData(totalData);
+      setTotalData(totalDataResponse);
 
-      const chartData = Object.entries(dataChar || {}).map(([key, value]) => ({
+      const processedChartData = Object.entries(dailyData || {}).map(([key, value]) => ({
         name: `Ngày ${key}`,
         order: value,
       }));
 
-      setDataChar(chartData);
+      setChartData(processedChartData);
     } catch (error) {
       notification.warning({
-        message: error.message,
+        message: "Lỗi khi tải dữ liệu thống kê",
+        description: error.message,
         duration: 2,
         placement: "top",
       });
@@ -79,148 +95,182 @@ function OrderStatistic() {
   };
 
   useEffect(() => {
-    handleFetchGeneral();
+    handleFetchGeneralData();
   }, []);
 
+  const totalMonthlyOrders = chartData?.reduce((sum, item) => sum + item.order, 0) || 0;
+
+  const statusCards = [
+    {
+      title: "Tất cả đơn hàng",
+      value: totalData?.allTime || 0,
+      color: "#1890ff",
+      valueStyle: { color: "#1890ff" }
+    },
+    {
+      title: "Chưa thanh toán",
+      value: dataGeneral?.UNPAID || 0,
+      color: "#ff4d4f",
+      valueStyle: { color: "#ff4d4f" }
+    },
+    {
+      title: "Chờ xử lý",
+      value: dataGeneral?.PENDING || 0,
+      color: "#faad14",
+      valueStyle: { color: "#faad14" }
+    },
+    {
+      title: "Đang giao hàng",
+      value: dataGeneral?.SHIPPED || 0,
+      color: "#722ed1",
+      valueStyle: { color: "#722ed1" }
+    },
+    {
+      title: "Đã giao hàng",
+      value: dataGeneral?.DELIVERED || 0,
+      color: "#52c41a",
+      valueStyle: { color: "#52c41a" }
+    },
+    {
+      title: "Đã hủy",
+      value: dataGeneral?.CANCELLED || 0,
+      color: "#f5222d",
+      valueStyle: { color: "#f5222d" }
+    }
+  ];
+
+  const timeFrameCards = [
+    {
+      title: "Hôm nay",
+      value: totalData?.today || 0,
+      color: "#108ee9"
+    },
+    {
+      title: "Hôm qua",
+      value: totalData?.yesterday || 0,
+      color: "#87d068"
+    },
+    {
+      title: "Tuần này",
+      value: totalData?.thisWeek || 0,
+      color: "#2db7f5"
+    },
+    {
+      title: "Năm nay",
+      value: totalData?.thisYear || 0,
+      color: "#673ab7"
+    }
+  ];
+
   return (
-    <div className="flex justify-center flex-col gap-4">
-      <h1 className="mx-auto text-primary my-4 flex text-3xl font-bold">
-        Thống kê đơn mua
-      </h1>
+    <div className="order-statistics">
+      <Card>
+        <Title level={2} style={{ textAlign: "center", marginBottom: 24 }}>
+          Thống kê đơn hàng
+        </Title>
 
-      <div className="flex justify-around">
-        <div className="border rounded bg-white px-36 py-2 flex flex-col justify-center border-primary">
-          <h1 className="text-primary font-bold">Tất cả đơn đến giờ</h1>
-          <p className="font-bold text-3xl mx-auto">
-            {totalData?.allTime || 0}
-          </p>
-        </div>
-        <div className="border rounded bg-white px-1 py-2 flex flex-col justify-center">
-          <h1 className="text-orange-500 font-bold">Đơn chưa thanh toán</h1>
-          <p className="font-bold text-3xl mx-auto text-orange-500">
-            {dataGeneral?.UNPAID || 0}
-          </p>
-        </div>
-        <div className="border rounded bg-white px-1 flex flex-col justify-center py-2">
-          <h1 className="text-yellow-500 font-bold">Đơn đang chờ xử lí</h1>
-          <p className="font-bold text-3xl mx-auto text-yellow-500">
-            {dataGeneral?.PENDING || 0}
-          </p>
-        </div>
-        <div className="border rounded bg-white px-1 flex flex-col justify-center py-2">
-          <h1 className="text-purple-600 font-bold">Đơn đang ship</h1>
-          <p className="font-bold text-3xl mx-auto text-purple-600">
-            {dataGeneral?.SHIPPED || 0}
-          </p>
-        </div>
-        <div className="border rounded bg-white px-1 flex flex-col justify-center py-2">
-          <h1 className="text-green-600 font-bold">Đơn Đã giao</h1>
-          <p className="font-bold text-3xl mx-auto text-green-600">
-            {dataGeneral?.DELIVERED || 0}
-          </p>
-        </div>
-        <div className="border rounded bg-white px-1 flex flex-col justify-center py-2">
-          <h1 className="text-red-600 font-bold">Đơn Đã Hủy</h1>
-          <p className="font-bold text-3xl mx-auto text-red-600">
-            {dataGeneral?.CANCELLED || 0}
-          </p>
-        </div>
-      </div>
+        <Row gutter={[16, 16]}>
+          {statusCards.map((card, index) => (
+            <Col xs={24} sm={12} md={8} lg={8} xl={4} key={index}>
+              <Card bordered>
+                <Statistic
+                  title={<Text strong>{card.title}</Text>}
+                  value={card.value}
+                  valueStyle={card.valueStyle}
+                />
+              </Card>
+            </Col>
+          ))}
+        </Row>
 
-      <div className="flex justify-around">
-        <div className="border rounded bg-white px-24 flex flex-col justify-center py-2">
-          <h1 className=" font-bold">Hôm nay</h1>
-          <p className="font-bold text-3xl mx-auto text-primary">
-            {totalData?.today || 0}
-          </p>
-        </div>
-        <div className="border rounded bg-white px-24 flex flex-col justify-center py-2">
-          <h1 className=" font-bold">Hôm qua</h1>
-          <p className="font-bold text-3xl mx-auto text-primary">
-            {totalData?.yesterday || 0}
-          </p>
-        </div>
-        <div className="border rounded bg-white px-24 flex flex-col justify-center py-2">
-          <h1 className=" font-bold">Trong tuần này</h1>
-          <p className="font-bold text-3xl mx-auto text-primary">
-            {totalData?.thisWeek || 0}
-          </p>
-        </div>
-        <div className="border rounded bg-white px-24 flex flex-col justify-center py-2">
-          <h1 className=" font-bold">Trong năm này</h1>
-          <p className="font-bold text-3xl mx-auto text-primary">
-            {totalData?.thisYear || 0}
-          </p>
-        </div>
-      </div>
-      <div className="h-[60vh] bg-white rounded px-4 py-2 mx-2 mt-auto border border-primary">
-        <div>
-          {dataChar && (
-            <div className="text-primary font-bold">
-              Tổng đơn tháng {selectedMonth} năm {selectedYear} là :{" "}
-              {dataChar?.reduce((sum, prev) => (sum += prev.order), 0)}{" "}
-            </div>
-          )}
+        <Divider />
 
-          <div className="flex justify-end my-4 gap-4">
-            <select
-              className="border rounded px-2 py-1"
-              value={selectedMonth}
-              onChange={(e) => setSelectedMonth(parseInt(e.target.value))}
-            >
-              {Array.from({ length: 12 }, (_, i) => (
-                <option key={i + 1} value={i + 1}>
-                  Tháng {i + 1}
-                </option>
-              ))}
-            </select>
+        <Row gutter={[16, 16]}>
+          {timeFrameCards.map((card, index) => (
+            <Col xs={24} sm={12} md={12} lg={6} key={index}>
+              <Card bordered>
+                <Statistic
+                  title={<Text strong>{card.title}</Text>}
+                  value={card.value}
+                  valueStyle={{ color: card.color }}
+                  suffix="đơn"
+                />
+              </Card>
+            </Col>
+          ))}
+        </Row>
 
-            <select
-              className="border rounded px-2 py-1"
-              value={selectedYear}
-              onChange={(e) => setSelectedYear(parseInt(e.target.value))}
-            >
-              {Array.from({ length: 5 }, (_, i) => (
-                <option key={i} value={new Date().getFullYear() - i}>
-                  {new Date().getFullYear() - i}
-                </option>
-              ))}
-            </select>
-            <button
-              className="bg-blue-500 text-white px-4 py-1 rounded"
-              onClick={handleFetchGeneral}
-            >
-              Lọc
-            </button>
+        <Divider />
+
+        <Card 
+          title="Biểu đồ thống kê đơn hàng theo ngày"
+          extra={
+            <Space>
+              <Select
+                value={selectedMonth}
+                style={{ width: 120 }}
+                onChange={(value) => setSelectedMonth(parseInt(value))}
+              >
+                {Array.from({ length: 12 }, (_, i) => (
+                  <Option key={i + 1} value={i + 1}>
+                    Tháng {i + 1}
+                  </Option>
+                ))}
+              </Select>
+
+              <Select
+                value={selectedYear}
+                style={{ width: 120 }}
+                onChange={(value) => setSelectedYear(parseInt(value))}
+              >
+                {Array.from({ length: 5 }, (_, i) => (
+                  <Option key={i} value={new Date().getFullYear() - i}>
+                    {new Date().getFullYear() - i}
+                  </Option>
+                ))}
+              </Select>
+              <Button type="primary" onClick={handleFetchGeneralData}>
+                Lọc
+              </Button>
+            </Space>
+          }
+        >
+          <Text strong style={{ color: "#1890ff", marginBottom: 16, display: "block" }}>
+            Tổng đơn tháng {selectedMonth} năm {selectedYear}: {totalMonthlyOrders} đơn hàng
+          </Text>
+
+          <div style={{ height: 400, marginTop: 20 }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart
+                data={chartData}
+                margin={{
+                  top: 5,
+                  right: 30,
+                  left: 20,
+                  bottom: 5,
+                }}
+                barSize={20}
+              >
+                <XAxis
+                  dataKey="name"
+                  scale="point"
+                  padding={{ left: 10, right: 10 }}
+                />
+                <YAxis />
+                <Tooltip />
+                <Legend />
+                <CartesianGrid strokeDasharray="3 3" />
+                <Bar 
+                  dataKey="order" 
+                  fill="#1890ff" 
+                  name="Số đơn hàng" 
+                  background={{ fill: "#f5f5f5" }} 
+                />
+              </BarChart>
+            </ResponsiveContainer>
           </div>
-        </div>
-
-        <ResponsiveContainer width="100%" height="70%">
-          <BarChart
-            width={500}
-            height={300}
-            data={dataChar}
-            margin={{
-              top: 5,
-              right: 30,
-              left: 20,
-              bottom: 5,
-            }}
-            barSize={20}
-          >
-            <XAxis
-              dataKey="name"
-              scale="point"
-              padding={{ left: 10, right: 10 }}
-            />
-            <YAxis />
-            <Tooltip />
-            <Legend />
-            <CartesianGrid strokeDasharray="3 3" />
-            <Bar dataKey="order" fill="blue" background={{ fill: "#eee" }} />
-          </BarChart>
-        </ResponsiveContainer>
-      </div>
+        </Card>
+      </Card>
     </div>
   );
 }

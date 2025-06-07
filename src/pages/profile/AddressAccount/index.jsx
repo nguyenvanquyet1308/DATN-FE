@@ -1,9 +1,32 @@
-import { Button, notification, Skeleton } from "antd";
+import { useState, useEffect } from "react";
+import { 
+  Button, 
+  notification, 
+  Skeleton, 
+  Card, 
+  Typography, 
+  Space, 
+  Tag, 
+  Divider, 
+  Empty, 
+  Popconfirm, 
+  Row, 
+  Col 
+} from "antd";
+import { 
+  PlusOutlined, 
+  HomeOutlined, 
+  PhoneOutlined, 
+  EditOutlined, 
+  DeleteOutlined, 
+  CheckCircleOutlined, 
+  EnvironmentOutlined 
+} from '@ant-design/icons';
 import { deleteDelivery, getDeliveries } from "apis/delivery.api";
 import paths from "constant/paths";
-import { useEffect, useState } from "react";
 import { generatePath, useNavigate } from "react-router-dom";
-import Icons from "utils/icons";
+
+const { Title, Text } = Typography;
 
 function AddressAccount() {
   const [deliveries, setDeliveries] = useState([]);
@@ -17,9 +40,10 @@ function AddressAccount() {
       const res = await getDeliveries({ limit: 20 });
       setDeliveries(res?.result?.content || []);
     } catch (error) {
-      notification.warning({
-        message: error.message,
-        duration: 2,
+      notification.error({
+        message: "Lỗi khi tải địa chỉ",
+        description: error.message || "Không thể tải địa chỉ. Vui lòng thử lại.",
+        duration: 3,
       });
     }
     setIsLoading(false);
@@ -28,11 +52,17 @@ function AddressAccount() {
   const handleDelete = async (id) => {
     try {
       await deleteDelivery(id);
+      notification.success({
+        message: "Đã xóa địa chỉ",
+        description: "Địa chỉ đã được xóa thành công",
+        duration: 2,
+      });
       handleFetchDeliveries();
     } catch (error) {
-      notification.warning({
-        message: error.message,
-        duration: 2,
+      notification.error({
+        message: "Lỗi khi xóa địa chỉ",
+        description: error.message || "Không thể xóa địa chỉ. Vui lòng thử lại.",
+        duration: 3,
       });
     }
   };
@@ -42,85 +72,127 @@ function AddressAccount() {
   }, []);
 
   return (
-    <div className="flex flex-col ">
-      <h1 className="text-2xl mb-4">Sổ địa chỉ</h1>
-      <div
-        className="flex items-center justify-center p-4 gap-2 border-2 border-dotted text-xl cursor-pointer text-green-600 bg-white rounded"
+    <div className="address-account">
+      <div className="mb-6">
+        <Title level={2} className="mb-1">Sổ địa chỉ</Title>
+        <Text type="secondary">Quản lý địa chỉ giao hàng của bạn</Text>
+      </div>
+
+      <Card
+        className="mb-4 hover:shadow-md transition-shadow duration-300"
         onClick={() => navigate(paths.MEMBER.CREATE_ADDRESS_ACCOUNT)}
+        hoverable
       >
-        <Icons.FaPlus />
-        <span>Thêm địa chỉ mới</span>
-      </div>
-      <div className="flex flex-col gap-4 mt-2">
-        {isLoading
-          ? Array.from({ length: 3 }).map((_, index) => (
-              <div
-                key={index}
-                className="p-4 bg-white flex justify-between items-center"
-              >
-                <Skeleton active title={false} paragraph={{ rows: 2 }} />
-                <div className="flex gap-2">
-                  <Skeleton.Button active />
-                  <Skeleton.Button active />
-                </div>
-              </div>
-            ))
-          : deliveries
+        <div className="flex items-center justify-center py-6 cursor-pointer text-blue-600">
+          <Space size="middle" direction="vertical" align="center">
+            <div className="flex items-center justify-center w-12 h-12 bg-blue-50 rounded-full">
+              <PlusOutlined style={{ fontSize: '24px' }} className="text-blue-500" />
+            </div>
+            <Text strong className="text-lg">Thêm địa chỉ mới</Text>
+          </Space>
+        </div>
+      </Card>
+
+      <div className="address-list">
+        {isLoading ? (
+          <Row gutter={[0, 16]}>
+            {[1, 2, 3].map((_, index) => (
+              <Col key={index} span={24}>
+                <Card className="w-full">
+                  <Skeleton active paragraph={{ rows: 3 }} />
+                </Card>
+              </Col>
+            ))}
+          </Row>
+        ) : deliveries.length === 0 ? (
+          <Empty 
+            description="Bạn chưa có địa chỉ nào" 
+            image={Empty.PRESENTED_IMAGE_SIMPLE} 
+          />
+        ) : (
+          <Row gutter={[0, 16]}>
+            {deliveries
               ?.sort((a, b) => (b.isDefault === true) - (a.isDefault === true))
-              .map((el) => (
-                <div
-                  key={el.id}
-                  className="p-4 bg-white flex justify-between items-center"
-                >
-                  <div>
-                    <div className="text-lg font-bold flex gap-4 items-center">
-                      <span>{el?.username}</span>
-                      {el?.isDefault && (
-                        <span className="text-sm text-green-400 flex items-center gap-1">
-                          <Icons.IoMdCheckmarkCircleOutline />
-                          <span>Địa chỉ mặc định</span>
-                        </span>
-                      )}
+              .map((address) => (
+                <Col key={address.id} span={24}>
+                  <Card 
+                    className="w-full hover:shadow-md transition-all duration-300"
+                    bordered={true}
+                  >
+                    <div className="flex flex-col md:flex-row justify-between md:items-center">
+                      <div className="flex-grow mb-4 md:mb-0">
+                        <div className="mb-2 flex flex-wrap items-center gap-2">
+                          <Title level={5} className="m-0">{address?.username}</Title>
+                          {address?.isDefault && (
+                            <Tag color="success" icon={<CheckCircleOutlined />}>
+                              Địa chỉ mặc định
+                            </Tag>
+                          )}
+                        </div>
+                        
+                        <Space direction="vertical" size="small" className="w-full">
+                          <div className="flex items-start">
+                            <EnvironmentOutlined className="text-gray-500 mr-2 mt-1" />
+                            <Text>
+                              {address?.street}
+                              {address?.ward && <span>, {address?.ward}</span>}
+                              {address?.district && <span>, {address?.district}</span>}
+                              {address?.city && <span>, {address?.city}</span>}
+                            </Text>
+                          </div>
+                          <div className="flex items-center">
+                            <PhoneOutlined className="text-gray-500 mr-2" />
+                            <Text>{address?.numberPhone}</Text>
+                          </div>
+                        </Space>
+                      </div>
+                      
+                      <Space>
+                        <Button 
+                          type="primary" 
+                          icon={<EditOutlined />}
+                          onClick={() => navigate(generatePath(paths.MEMBER.UPDATE_ADDRESS_ACCOUNT, { id: address?.id }))}
+                        >
+                          Chỉnh sửa
+                        </Button>
+                        
+                        {!address?.isDefault && (
+                          <Popconfirm
+                            title="Xóa địa chỉ"
+                            description="Bạn có chắc chắn muốn xóa địa chỉ này không?"
+                            onConfirm={() => handleDelete(address?.id)}
+                            okText="Xóa"
+                            cancelText="Hủy"
+                            okButtonProps={{ danger: true }}
+                          >
+                            <Button 
+                              danger 
+                              icon={<DeleteOutlined />}
+                            >
+                              Xóa
+                            </Button>
+                          </Popconfirm>
+                        )}
+                      </Space>
                     </div>
-                    <div className="flex gap-2">
-                      <span className="text-slate-600">Địa chỉ:</span>
-                      <span>
-                        {el?.street}
-                        {el?.ward && <span>, {el?.ward}</span>}
-                        {el?.district && <span>, {el?.district}</span>}
-                        {el?.city && <span>, {el?.city}</span>}
-                      </span>
-                    </div>
-                    <div className="flex gap-2">
-                      <span className="text-slate-600">Số điện thoại:</span>
-                      <span>{el?.numberPhone}</span>
-                    </div>
-                  </div>
-                  <div className="flex gap-2">
-                    <Button
-                      className="bg-blue-600 text-white"
-                      onClick={() =>
-                        navigate(
-                          generatePath(paths.MEMBER.UPDATE_ADDRESS_ACCOUNT, {
-                            id: el?.id,
-                          }),
-                        )
-                      }
-                    >
-                      Chỉnh sửa
-                    </Button>
-                    {!el?.isDefault && (
-                      <Button
-                        className="bg-red-600 text-white"
-                        onClick={() => handleDelete(el?.id)}
-                      >
-                        Xóa
-                      </Button>
-                    )}
-                  </div>
-                </div>
+                  </Card>
+                </Col>
               ))}
+          </Row>
+        )}
       </div>
+
+      <style jsx global>{`
+        .address-account .ant-card-body {
+          padding: 24px;
+        }
+        
+        @media (max-width: 768px) {
+          .address-account .ant-card-body {
+            padding: 16px;
+          }
+        }
+      `}</style>
     </div>
   );
 }

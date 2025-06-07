@@ -1,3 +1,37 @@
+import React, { useState } from "react";
+import {
+  Row,
+  Col,
+  Card,
+  Typography,
+  Form,
+  Input,
+  Button,
+  Divider,
+  Steps,
+  Space,
+  Badge,
+  List,
+  Avatar,
+  InputNumber,
+  Tag,
+} from "antd";
+import {
+  ShoppingOutlined,
+  CreditCardOutlined,
+  CheckCircleOutlined,
+  UserOutlined,
+  HomeOutlined,
+  PhoneOutlined,
+  MailOutlined,
+  ShoppingCartOutlined,
+  ArrowLeftOutlined,
+  RightOutlined,
+  SafetyCertificateOutlined,
+} from "@ant-design/icons";
+
+const { Title, Text } = Typography;
+
 const products = [
   {
     id: 1,
@@ -58,143 +92,244 @@ const products = [
 ];
 
 const CheckOut = () => {
+  const [currentStep, setCurrentStep] = useState(1);
+  const totalAmount = products.reduce((acc, product) => acc + product.totalPrice, 0);
+  
   return (
-    <div className="font-[sans-serif] bg-white ">
-      <div className="flex max-sm:flex-col gap-12 max-lg:gap-4 h-full">
-        <div className="bg-gradient-to-r from-gray-800 via-gray-700 to-gray-800 sm:h-screen sm:sticky sm:top-0 lg:min-w-[370px] sm:min-w-[300px]">
-          <div className="relative h-full">
-            <div className="px-4 py-8 sm:overflow-auto sm:h-[calc(100vh-60px)]">
-              <div className="space-y-4">
-                {products.map((product) => (
-                  <div key={product.id} className="flex items-start gap-4">
-                    <div className="w-32 h-28 max-lg:w-24 max-lg:h-24 flex p-3 shrink-0 bg-gray-300 rounded-md">
-                      <img
-                        src={product.image}
-                        alt={product.name}
-                        className="w-full object-contain"
+    <div className="checkout-container bg-gray-50 py-8">
+      <div className="max-w-7xl mx-auto px-4">
+        {/* Checkout Steps */}
+        <Card className="mb-6" bordered={false}>
+          <Steps
+            current={currentStep}
+            items={[
+              {
+                title: "Giỏ hàng",
+                icon: <ShoppingOutlined />,
+              },
+              {
+                title: "Thanh toán",
+                icon: <CreditCardOutlined />,
+              },
+              {
+                title: "Hoàn tất",
+                icon: <CheckCircleOutlined />,
+              },
+            ]}
+          />
+        </Card>
+
+        <Row gutter={[24, 24]}>
+          {/* Order Summary */}
+          <Col xs={24} lg={8} order={{ xs: 2, lg: 1 }}>
+            <Card
+              title={
+                <div className="flex items-center justify-between">
+                  <span>Đơn hàng của bạn</span>
+                  <Badge count={products.length} showZero color="#108ee9" />
+                </div>
+              }
+              bordered={false}
+              className="order-summary h-full sticky top-6"
+              bodyStyle={{ 
+                maxHeight: "calc(100vh - 220px)",
+                overflowY: "auto",
+                padding: "16px"
+              }}
+            >
+              <List
+                itemLayout="horizontal"
+                dataSource={products}
+                renderItem={(item) => (
+                  <List.Item 
+                    key={item.id}
+                    className="py-2 hover:bg-gray-50 transition-all duration-300"
+                  >
+                    <List.Item.Meta
+                      avatar={
+                        <Avatar 
+                          shape="square" 
+                          size={64} 
+                          src={item.image}
+                          className="bg-gray-100 p-1"
+                        />
+                      }
+                      title={item.name}
+                      description={
+                        <Space direction="vertical" size={0}>
+                          <Text type="secondary">Size: {item.size}</Text>
+                          <div className="flex justify-between">
+                            <Text>SL: {item.quantity}</Text>
+                            <Text strong>${item.totalPrice}</Text>
+                          </div>
+                        </Space>
+                      }
+                    />
+                  </List.Item>
+                )}
+              />
+              
+              <Divider />
+              
+              <div className="summary-footer">
+                <div className="flex justify-between mb-2">
+                  <Text>Tạm tính:</Text>
+                  <Text>${totalAmount}</Text>
+                </div>
+                <div className="flex justify-between mb-2">
+                  <Text>Phí vận chuyển:</Text>
+                  <Text>$0</Text>
+                </div>
+                <Divider className="my-2" />
+                <div className="flex justify-between">
+                  <Text strong>Tổng tiền:</Text>
+                  <Text strong className="text-xl text-red-500">${totalAmount}</Text>
+                </div>
+                
+                <div className="mt-4">
+                  <Tag color="green" icon={<SafetyCertificateOutlined />} className="mb-2">Bảo mật thanh toán</Tag>
+                  <Tag color="blue" icon={<SafetyCertificateOutlined />}>Giao hàng nhanh</Tag>
+                </div>
+              </div>
+            </Card>
+          </Col>
+
+          {/* Checkout Form */}
+          <Col xs={24} lg={16} order={{ xs: 1, lg: 2 }}>
+            <Card bordered={false} className="checkout-form">
+              <Title level={3} className="mb-6">Thông tin thanh toán</Title>
+              
+              <Form layout="vertical">
+                <Title level={4} className="mb-4">
+                  <UserOutlined className="mr-2" />
+                  Thông tin cá nhân
+                </Title>
+                
+                <Row gutter={16}>
+                  <Col xs={24} sm={12}>
+                    <Form.Item 
+                      label="Họ" 
+                      name="firstName"
+                      rules={[{ required: true, message: 'Vui lòng nhập họ!' }]}
+                    >
+                      <Input 
+                        placeholder="Nhập họ" 
+                        size="large"
+                        prefix={<UserOutlined className="text-gray-400" />}
                       />
-                    </div>
-                    <div className="w-full">
-                      <h3 className="text-base text-white">{product.name}</h3>
-                      <ul className="text-xs text-gray-300 space-y-2 mt-2">
-                        <li className="flex flex-wrap gap-4">
-                          Size <span className="ml-auto">{product.size}</span>
-                        </li>
-                        <li className="flex flex-wrap gap-4">
-                          Quantity{" "}
-                          <span className="ml-auto">{product.quantity}</span>
-                        </li>
-                        <li className="flex flex-wrap gap-4">
-                          Total Price{" "}
-                          <span className="ml-auto">${product.totalPrice}</span>
-                        </li>
-                      </ul>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="md:absolute md:left-0 md:bottom-0 bg-gray-800 w-full p-4">
-              <h4 className="flex flex-wrap gap-4 text-base text-white">
-                Total{" "}
-                <span className="ml-auto">
-                  $
-                  {products.reduce(
-                    (acc, product) => acc + product.totalPrice,
-                    0,
-                  )}
-                </span>
-              </h4>
-            </div>
-          </div>
-        </div>
-
-        <div className="max-w-4xl w-full h-max rounded-md px-4 py-8 sticky top-0">
-          <h2 className="text-2xl font-bold text-gray-800">
-            Complete your order
-          </h2>
-          <form className="mt-8">
-            <div>
-              <h3 className="text-base text-gray-800 mb-4">Personal Details</h3>
-              <div className="grid md:grid-cols-2 gap-4">
-                <div>
-                  <input
-                    type="text"
-                    placeholder="First Name"
-                    className="px-4 py-3 bg-gray-100 focus:bg-transparent text-gray-800 w-full text-sm rounded-md focus:outline-blue-600"
-                  />
-                </div>
-
-                <div>
-                  <input
-                    type="text"
-                    placeholder="Last Name"
-                    className="px-4 py-3 bg-gray-100 focus:bg-transparent text-gray-800 w-full text-sm rounded-md focus:outline-blue-600"
-                  />
-                </div>
-
-                <div>
-                  <input
-                    type="email"
-                    placeholder="Email"
-                    className="px-4 py-3 bg-gray-100 focus:bg-transparent text-gray-800 w-full text-sm rounded-md focus:outline-blue-600"
-                  />
-                </div>
-
-                <div>
-                  <input
-                    type="number"
-                    placeholder="Phone No."
-                    className="px-4 py-3 bg-gray-100 focus:bg-transparent text-gray-800 w-full text-sm rounded-md focus:outline-blue-600"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="mt-8">
-              <h3 className="text-base text-gray-800 mb-4">Shipping Address</h3>
-              <div className="grid md:grid-cols-2 gap-4">
-                <div>
-                  <input
-                    type="text"
-                    placeholder="Address Line"
-                    className="px-4 py-3 bg-gray-100 focus:bg-transparent text-gray-800 w-full text-sm rounded-md focus:outline-blue-600"
-                  />
-                </div>
-                <div>
-                  <input
-                    type="text"
-                    placeholder="City"
-                    className="px-4 py-3 bg-gray-100 focus:bg-transparent text-gray-800 w-full text-sm rounded-md focus:outline-blue-600"
-                  />
-                </div>
-                <div>
-                  <input
-                    type="text"
-                    placeholder="State"
-                    className="px-4 py-3 bg-gray-100 focus:bg-transparent text-gray-800 w-full text-sm rounded-md focus:outline-blue-600"
-                  />
-                </div>
-              </div>
-
-              <div className="flex gap-4 max-md:flex-col mt-8">
-                <button
-                  type="button"
-                  className="rounded-md px-6 py-3 w-full text-sm tracking-wide bg-transparent hover:bg-gray-100 border border-gray-300 text-gray-800 max-md:order-1"
+                    </Form.Item>
+                  </Col>
+                  <Col xs={24} sm={12}>
+                    <Form.Item 
+                      label="Tên" 
+                      name="lastName"
+                      rules={[{ required: true, message: 'Vui lòng nhập tên!' }]}
+                    >
+                      <Input 
+                        placeholder="Nhập tên" 
+                        size="large" 
+                        prefix={<UserOutlined className="text-gray-400" />}
+                      />
+                    </Form.Item>
+                  </Col>
+                </Row>
+                
+                <Row gutter={16}>
+                  <Col xs={24} sm={12}>
+                    <Form.Item 
+                      label="Email" 
+                      name="email"
+                      rules={[
+                        { required: true, message: 'Vui lòng nhập email!' },
+                        { type: 'email', message: 'Email không hợp lệ!' }
+                      ]}
+                    >
+                      <Input 
+                        placeholder="example@email.com" 
+                        size="large"
+                        prefix={<MailOutlined className="text-gray-400" />}
+                      />
+                    </Form.Item>
+                  </Col>
+                  <Col xs={24} sm={12}>
+                    <Form.Item 
+                      label="Số điện thoại" 
+                      name="phone"
+                      rules={[{ required: true, message: 'Vui lòng nhập số điện thoại!' }]}
+                    >
+                      <Input 
+                        placeholder="Nhập số điện thoại" 
+                        size="large"
+                        prefix={<PhoneOutlined className="text-gray-400" />}
+                      />
+                    </Form.Item>
+                  </Col>
+                </Row>
+                
+                <Divider />
+                
+                <Title level={4} className="mb-4">
+                  <HomeOutlined className="mr-2" />
+                  Địa chỉ giao hàng
+                </Title>
+                
+                <Form.Item 
+                  label="Địa chỉ" 
+                  name="address"
+                  rules={[{ required: true, message: 'Vui lòng nhập địa chỉ!' }]}
                 >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  className="rounded-md px-6 py-3 w-full text-sm tracking-wide bg-blue-600 hover:bg-blue-700 text-white"
-                >
-                  Complete Purchase
-                </button>
-              </div>
-            </div>
-          </form>
-        </div>
+                  <Input 
+                    placeholder="Số nhà, tên đường" 
+                    size="large"
+                    prefix={<HomeOutlined className="text-gray-400" />}
+                  />
+                </Form.Item>
+                
+                <Row gutter={16}>
+                  <Col xs={24} sm={12}>
+                    <Form.Item 
+                      label="Thành phố" 
+                      name="city"
+                      rules={[{ required: true, message: 'Vui lòng nhập thành phố!' }]}
+                    >
+                      <Input placeholder="Thành phố" size="large" />
+                    </Form.Item>
+                  </Col>
+                  <Col xs={24} sm={12}>
+                    <Form.Item 
+                      label="Tỉnh/Thành" 
+                      name="state"
+                      rules={[{ required: true, message: 'Vui lòng nhập tỉnh/thành!' }]}
+                    >
+                      <Input placeholder="Tỉnh/Thành" size="large" />
+                    </Form.Item>
+                  </Col>
+                </Row>
+                
+                <Divider />
+                
+                <div className="flex justify-between mt-8">
+                  <Button 
+                    icon={<ArrowLeftOutlined />}
+                    size="large"
+                    className="flex items-center"
+                  >
+                    Quay lại
+                  </Button>
+                  
+                  <Button 
+                    type="primary" 
+                    size="large"
+                    icon={<RightOutlined />}
+                    className="flex items-center"
+                  >
+                    Tiếp tục
+                  </Button>
+                </div>
+              </Form>
+            </Card>
+          </Col>
+        </Row>
       </div>
     </div>
   );

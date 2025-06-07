@@ -25,6 +25,13 @@ import {
   FaCheck,
   FaCalendarWeek,
   FaClipboardList,
+  FaBoxOpen,
+  FaList,
+  FaFilter,
+  FaChartBar,
+  FaCalendarDay,
+  FaCalendarAlt,
+  FaCalendarCheck,
 } from "react-icons/fa";
 import { FaGoogle } from "react-icons/fa";
 import { LiaCalendarDaySolid } from "react-icons/lia";
@@ -191,4 +198,11 @@ export default {
   MdCalendarMonth,
   MdSelectAll,
   FaClipboardList,
+  FaBoxOpen,
+  FaList,
+  FaFilter,
+  FaChartBar,
+  FaCalendarDay,
+  FaCalendarAlt,
+  FaCalendarCheck,
 };

@@ -17,60 +17,69 @@ function NavItem({ data, isShowText, setNav }) {
   }, [isShowText]);
 
   return (
-    <div key={data.id}>
+    <div key={data.id} className="mb-1">
       {!data?.submenu && (
         <NavLink
           to={data.path}
           className={({ isActive }) =>
-            `px-6 py-2 flex items-center gap-2 font-bold hover:bg-gray-500 transition-all rounded ${
+            `flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-300 ${
+              isShowText ? "justify-start" : "justify-center"
+            } ${
               isActive
-                ? "bg-gradient-to-r from-primary to-secondary bg-gray-500"
-                : " text-gray-200 "
+                ? "bg-gradient-to-r from-primary to-secondary text-white shadow-md"
+                : "text-gray-200 hover:bg-gray-700 hover:text-white"
             }`
           }
         >
-          <span>{data.icon}</span>
-          {isShowText && <span>{data.text}</span>}
+          <span className={`text-lg ${isShowText ? "" : "text-xl"}`}>{data.icon}</span>
+          {isShowText && <span className="font-medium tracking-wide">{data.text}</span>}
         </NavLink>
       )}
       {data.submenu && (
-        <div>
+        <div className="relative">
           <div
             onClick={() => {
               setNav(true);
               setIsOpenParent(!isOpenParent);
             }}
-            className={`px-6 py-2 flex items-center gap-5 text-gray-200  font-bold cursor-pointer rounded ${
-              isSubmenuActive ? "text-primary " : "hover:bg-gray-500"
+            className={`flex items-center px-4 py-3 rounded-lg cursor-pointer transition-all duration-300 ${
+              isShowText ? "justify-between" : "justify-center"
+            } ${
+              isSubmenuActive 
+                ? "text-primary font-medium" 
+                : "text-gray-200 hover:bg-gray-700 hover:text-white"
             }`}
           >
-            <div className="flex items-center gap-2">
-              <span>{data.icon}</span>
-              {isShowText && <span>{data.text}</span>}
+            <div className="flex items-center gap-3">
+              <span className={`text-lg ${isShowText ? "" : "text-xl"}`}>{data.icon}</span>
+              {isShowText && <span className="font-medium tracking-wide">{data.text}</span>}
             </div>
-            {isShowText && isOpenParent && (
-              <Icons.IoIosArrowDropdown className="text-[24px] ml-auto " />
-            )}
-            {isShowText && !isOpenParent && (
-              <Icons.IoIosArrowDropright className="text-[24px] ml-auto" />
+            {isShowText && (
+              <span className="transition-transform duration-300 ease-in-out text-lg ml-2">
+                {isOpenParent ? (
+                  <Icons.IoIosArrowDropdown className="transform transition-transform" />
+                ) : (
+                  <Icons.IoIosArrowDropright className="transform transition-transform" />
+                )}
+              </span>
             )}
           </div>
           {isOpenParent && isShowText && (
-            <div className="flex flex-col pl-4 mt-2 gap-2">
+            <div className="pl-4 mt-1 flex flex-col gap-1 overflow-hidden animate-fadeIn">
               {data.submenu.map((item) => (
                 <NavLink
                   key={item.id}
                   to={item.path}
                   className={({ isActive }) =>
-                    `px-4 py-2 flex items-center gap-2 font-bold hover:bg-gray-300 hover:text-slate-900  rounded transition-all duration-600 ease-in-out  ${
+                    `flex items-center gap-3 px-4 py-2.5 rounded-md transition-all duration-300 ${
                       isActive
-                        ? "bg-gradient-to-r from-primary to-secondary hover:text-white "
-                        : " text-gray-200 "
+                        ? "bg-gradient-to-r from-primary/90 to-secondary/90 text-white shadow-sm"
+                        : "text-gray-300 hover:bg-gray-700/50 hover:text-white"
                     }`
                   }
                 >
-                  <Icons.FaRegCircle size={8} />
-                  <span>{item.text}</span>
+                  <Icons.FaRegCircle size={6} className="text-current opacity-80" />
+                  <span className="font-medium tracking-wide text-sm">{item.text}</span>
                 </NavLink>
               ))}
             </div>

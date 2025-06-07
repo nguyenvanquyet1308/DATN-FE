@@ -2,13 +2,35 @@ import { faker } from "@faker-js/faker";
 import moment from "moment";
 import renderReply from "./renderReply";
 import { useState } from "react";
-import { notification, Progress, Tooltip } from "antd";
-import Icons from "utils/icons";
-import Button from "components/Button";
+import { 
+  notification, 
+  Progress, 
+  Tooltip, 
+  Button, 
+  Typography, 
+  Avatar, 
+  Input, 
+  Card, 
+  Space, 
+  Divider, 
+  Image 
+} from "antd";
+import {
+  DeleteOutlined,
+  CameraOutlined,
+  SendOutlined,
+  UserOutlined,
+  CloseOutlined,
+  CommentOutlined,
+  MessageOutlined
+} from '@ant-design/icons';
 import useFileUpload from "hooks/useUpload";
 import defaultPreviewImage from "assets/images/admin/defaultPreviewProduct.png";
 import { replyQuestion } from "apis/replyQuestion.api";
 import { useSelector } from "react-redux";
+
+const { Text, Paragraph } = Typography;
+const { TextArea } = Input;
 
 function ReplyItem({ data, questionData, replyTo }) {
   const { isLogged, userInfo } = useSelector((state) => state.auth);
@@ -63,39 +85,34 @@ function ReplyItem({ data, questionData, replyTo }) {
     }
 
     setTimeout(() => {
-      setIsReplyLoading(true);
+      setIsReplyLoading(false);
     }, 1000);
   };
 
   const ImageUploadPreview = ({ src, index }) => {
     return (
-      <div className="relative bg-slate-300">
-        <div
-          className="top-0 right-0 absolute cursor-pointer  p-1 bg-white text-sm rounded-l rounded-b"
-          onClick={() =>
-            setUploadUrls((prev) => prev.filter((el) => el != src))
-          }
-        >
-          <Icons.MdDeleteForever color="red" />
-        </div>
+      <div className="relative rounded overflow-hidden border border-gray-200">
+        <Button
+          type="text"
+          danger
+          icon={<DeleteOutlined />}
+          size="small"
+          className="absolute top-0 right-0 bg-white shadow-sm z-10"
+          onClick={() => setUploadUrls((prev) => prev.filter((el) => el !== src))}
+        />
         <img
           src={src || defaultPreviewImage}
           alt={src}
           className="w-20 h-20 object-cover"
         />
         {uploadProgress[index] !== undefined && uploadProgress[index] > 0 && (
-          <div
-            className={
-              "absolute top-0 left-0 right-0 bottom-0 bg-slate-200 bg-opacity-70 flex items-center justify-center transition-opacity duration-300"
-            }
-          >
-            <span className="text-white p-2 cursor-pointer">
-              <Progress
-                type="circle"
-                percent={uploadProgress[index]}
-                size={32}
-              />
-            </span>
+          <div className="absolute top-0 left-0 right-0 bottom-0 bg-black bg-opacity-40 flex items-center justify-center transition-all duration-300">
+            <Progress
+              type="circle"
+              percent={uploadProgress[index]}
+              size={32}
+              strokeColor="#1890ff"
+            />
           </div>
         )}
       </div>
@@ -108,6 +125,7 @@ function ReplyItem({ data, questionData, replyTo }) {
     if (filesReceived.length > 7) {
       notification.error({
         message: "Chỉ chọn tối đa 7 ảnh!",
+        placement: "top"
       });
       return;
     }
@@ -136,125 +154,151 @@ function ReplyItem({ data, questionData, replyTo }) {
 
   return (
     <div
-      className={`flex flex-col gap-4  p-2 ml-2 ${
+      className={`mb-3 ${
         replyTo
-          ? "border-l border-blue-400  border-dotted ml-4"
-          : "border border-blue-600 rounded"
+          ? "pl-4 border-l-2 border-blue-100"
+          : ""
       }`}
     >
-      <div className="flex gap-4 items-center">
-        <div>
-          <img
-            src={data?.postBy?.avatar || faker.image.avatar()}
-            className={` rounded-full ${replyTo ? "w-5 h-5" : "w-8 h-8"} `}
-            alt={data?.postBy?.username}
-          />
-        </div>
-        <div className="flex flex-col gap-1">
-          <div className={`font-bold ${replyTo ? "text-sm" : "text-lg"}`}>
-            {userInfo?.data?.id === data?.postBy?.id
-              ? "You"
-              : data?.postBy?.username}
-          </div>
-          <div className="text-gray-500">
-            {moment(data?.createdAt).fromNow()}
-          </div>
-        </div>
-      </div>
-      <div>
-        {replyTo && userInfo.data.id !== data?.postBy?.id && (
-          <span className="font-bold ">@{replyTo.postBy.username} </span>
-        )}
-        <span>{data?.replyText}</span>
-      </div>
-      {data?.images?.length > 0 && (
-        <div className="flex gap-2 px-2">
-          {data?.images?.split(",").map((img, index) => (
-            <div key={index} className="border p-2 rounded">
-              <img
-                src={img}
-                alt={img}
-                className="object-cover w-12 h-12 rounded-md"
-              />
-            </div>
-          ))}
-        </div>
-      )}
-      <div
-        className="flex justify-end font-bold text-blue-700 cursor-pointer"
-        onClick={() => {
-          if (!isLogged) {
-            notification.warning({
-              message: "Vui lòng đăng nhập để trả lời",
-              duration: 1,
-              placement: "top",
-            });
-            return;
-          }
-          setIsShowCommentPanel(!isShowCommentPanel);
-          setUploadUrls([]);
-          setReplyText("");
-        }}
+      <Card 
+        size="small" 
+        className="w-full"
+        bordered={!replyTo}
       >
-        {isShowCommentPanel ? (
-          <Icons.IoIosCloseCircleOutline size={24} color="red" />
-        ) : (
-          <span>Trả lời</span>
-        )}
-      </div>
+        <div className="flex items-center gap-2 mb-2">
+          <Avatar
+            src={data?.postBy?.avatar || faker.image.avatar()}
+            size={replyTo ? "small" : "default"}
+            icon={<UserOutlined />}
+          />
+          <div>
+            <Text strong className="block">
+              {userInfo?.data?.id === data?.postBy?.id
+                ? "Bạn"
+                : data?.postBy?.username}
+            </Text>
+            <Text type="secondary" className="text-xs">
+              {moment(data?.createdAt).fromNow()}
+            </Text>
+          </div>
+        </div>
+        
+        <div className="ml-8">
+          {replyTo && userInfo.data.id !== data?.postBy?.id && (
+            <Text strong className="text-blue-600">@{replyTo.postBy.username} </Text>
+          )}
+          <Paragraph>{data?.replyText}</Paragraph>
+          
+          {data?.images?.length > 0 && (
+            <div className="mt-2">
+              <Image.PreviewGroup>
+                <div className="flex flex-wrap gap-2">
+                  {data?.images?.split(",").map((img, index) => (
+                    <div key={index} className="w-16 h-16 overflow-hidden rounded border border-gray-200">
+                      <Image
+                        src={img}
+                        alt={`Reply image ${index}`}
+                        className="object-cover"
+                        style={{ width: '100%', height: '100%' }}
+                      />
+                    </div>
+                  ))}
+                </div>
+              </Image.PreviewGroup>
+            </div>
+          )}
+          
+          <div className="flex justify-end mt-2">
+            <Button
+              type="text"
+              size="small"
+              icon={isShowCommentPanel ? <CloseOutlined /> : <MessageOutlined />}
+              onClick={() => {
+                if (!isLogged) {
+                  notification.warning({
+                    message: "Vui lòng đăng nhập để trả lời",
+                    duration: 1,
+                    placement: "top",
+                  });
+                  return;
+                }
+                setIsShowCommentPanel(!isShowCommentPanel);
+                setUploadUrls([]);
+                setReplyText("");
+              }}
+            >
+              {isShowCommentPanel ? "Hủy" : "Trả lời"}
+            </Button>
+          </div>
+        </div>
+      </Card>
+      
       {isShowCommentPanel && (
-        <>
-          <div className="ml-4 flex gap-2 ">
-            <img
-              src={faker.image.avatar()}
-              className="rounded-full w-7 h-7 border"
-              alt={faker.name.firstName()}
+        <div className="ml-8 mt-3">
+          <div className="flex gap-3">
+            <Avatar
+              src={userInfo?.data?.avatar || faker.image.avatar()}
+              size="small"
+              icon={<UserOutlined />}
             />
-            <div className="rounded-md bg-gray-500 flex-1 flex flex-col">
-              <textarea
+            <div className="flex-1">
+              <TextArea
                 value={replyText}
                 onChange={(e) => setReplyText(e.target.value)}
-                type="text "
-                className="bg-gray-500 text-white px-2 outline-none py-2 rounded-md"
+                placeholder="Nhập câu trả lời của bạn..."
+                autoSize={{ minRows: 2, maxRows: 4 }}
+                className="mb-3"
               />
-              <div className="flex justify-between items-center p-2">
-                <input
-                  id={`file-input-reply-${data.id}`}
-                  className="hidden"
-                  onChange={(e) => handleUpload(e)}
-                  multiple
-                  type="file"
-                  accept={"image/*"}
-                />
-                <label htmlFor={`file-input-reply-${data.id}`}>
-                  <Tooltip title={"Tải ảnh lên"}>
-                    <Icons.FaCameraRetro
-                      size={20}
-                      className="cursor-pointer text-slate-200"
-                    />
+              
+              {uploadUrls.length > 0 && (
+                <div className="flex flex-wrap gap-3 mb-3 border-t border-b py-3 bg-gray-50">
+                  {uploadUrls.map((link, index) => (
+                    <ImageUploadPreview key={index} src={link} index={index} />
+                  ))}
+                </div>
+              )}
+              
+              <div className="flex justify-between">
+                <div>
+                  <input
+                    id={`file-input-reply-${data.id}`}
+                    className="hidden"
+                    onChange={(e) => handleUpload(e)}
+                    multiple
+                    type="file"
+                    accept="image/*"
+                  />
+                  <Tooltip title="Tải ảnh lên">
+                    <Button 
+                      icon={<CameraOutlined />}
+                      size="small"
+                      onClick={() => document.getElementById(`file-input-reply-${data.id}`).click()}
+                    >
+                      Thêm ảnh
+                    </Button>
                   </Tooltip>
-                </label>
-
-                <Icons.IoMdSend
-                  onClick={() => handleReply()}
-                  size={28}
-                  className="cursor-pointer text-blue-500"
-                />
+                </div>
+                
+                <Button 
+                  type="primary" 
+                  icon={<SendOutlined />}
+                  size="small"
+                  onClick={handleReply}
+                  loading={isReplyLoading}
+                >
+                  Gửi trả lời
+                </Button>
               </div>
             </div>
           </div>
-          <div className="flex gap-2 overflow-x-auto ml-8">
-            {uploadUrls.map((link, index) => (
-              <div className="relative bg-white p-1 rounded">
-                <ImageUploadPreview src={link} index={index} />
-              </div>
-            ))}
-          </div>
-        </>
+        </div>
       )}
 
-      {data?.childReplies &&
-        renderReply(data?.childReplies, questionData, data)}
+      {data?.childReplies && data.childReplies.length > 0 && (
+        <div className="mt-3 ml-6">
+          {renderReply(data?.childReplies, questionData, data)}
+        </div>
+      )}
     </div>
   );
 }

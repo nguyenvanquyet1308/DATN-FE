@@ -1,9 +1,34 @@
-import { notification, Progress, Skeleton, Tooltip } from "antd";
+import { 
+  notification, 
+  Progress, 
+  Skeleton, 
+  Tooltip, 
+  Typography, 
+  Card, 
+  Input, 
+  Button, 
+  Divider,
+  Avatar, 
+  Row, 
+  Col,
+  Empty,
+  Space,
+  Badge
+} from "antd";
+import {
+  CameraOutlined,
+  DeleteOutlined,
+  SendOutlined,
+  CloudUploadOutlined,
+  SearchOutlined,
+  TrophyOutlined,
+  CommentOutlined,
+  UserOutlined
+} from '@ant-design/icons';
 import { createQuestion, getQuestions } from "apis/question.api";
 import React, { useEffect, useMemo, useState } from "react";
 import { faker } from "@faker-js/faker";
 import defaultPreviewImage from "assets/images/admin/defaultPreviewProduct.png";
-
 import moment from "moment";
 import "moment/locale/vi";
 import Question from "./Question";
@@ -13,7 +38,11 @@ import useFileUpload from "hooks/useUpload";
 import { HashLoader } from "react-spinners";
 import { getTopReactUsers } from "apis/user.api";
 import Pagination from "pages/admin/components/Pagination";
+
 moment.locale("vi");
+
+const { Title, Text, Paragraph } = Typography;
+const { TextArea } = Input;
 
 function FAQ() {
   const [question, setQuestion] = useState();
@@ -38,33 +67,28 @@ function FAQ() {
 
   const ImageUploadPreview = ({ src, index }) => {
     return (
-      <div className="relative">
-        <div
-          className="top-0 right-0 absolute cursor-pointer  p-1 bg-white"
-          onClick={() =>
-            setUploadUrls((prev) => prev.filter((el) => el != src))
-          }
-        >
-          <Icons.MdDeleteForever color="red" />
-        </div>
+      <div className="relative rounded overflow-hidden border border-gray-200">
+        <Button
+          type="text"
+          danger
+          icon={<DeleteOutlined />}
+          size="small"
+          className="absolute top-0 right-0 bg-white shadow-sm z-10"
+          onClick={() => setUploadUrls((prev) => prev.filter((el) => el !== src))}
+        />
         <img
           src={src || defaultPreviewImage}
           alt={src}
           className="w-24 h-20 object-cover"
         />
         {uploadProgress[index] !== undefined && uploadProgress[index] > 0 && (
-          <div
-            className={
-              "absolute top-0 left-0 right-0 bottom-0 bg-slate-200 bg-opacity-70 flex items-center justify-center transition-opacity duration-300"
-            }
-          >
-            <span className="text-white p-2 cursor-pointer">
-              <Progress
-                type="circle"
-                percent={uploadProgress[index]}
-                size={32}
-              />
-            </span>
+          <div className="absolute top-0 left-0 right-0 bottom-0 bg-black bg-opacity-40 flex items-center justify-center transition-all duration-300">
+            <Progress
+              type="circle"
+              percent={uploadProgress[index]}
+              size={32}
+              strokeColor="#1890ff"
+            />
           </div>
         )}
       </div>
@@ -77,6 +101,7 @@ function FAQ() {
     if (filesReceived.length > 7) {
       notification.error({
         message: "Chỉ chọn tối đa 7 ảnh!",
+        placement: "top",
       });
       return;
     }
@@ -113,6 +138,7 @@ function FAQ() {
       notification.warning({
         message: error.message,
         duration: 2,
+        placement: "top"
       });
     }
     setLoadingData((prev) => ({ ...prev, question: false }));
@@ -127,6 +153,7 @@ function FAQ() {
       notification.warning({
         message: error.message,
         duration: 2,
+        placement: "top"
       });
     }
     setLoadingData((prev) => ({ ...prev, topUser: false }));
@@ -134,33 +161,45 @@ function FAQ() {
 
   const topQuestionUserPanel = useMemo(
     () => (
-      <div className="relative flex-1">
-        <aside className="sticky top-20 w-full bg-white px-4 py-6 rounded-lg shadow-md min-h-[85vh]">
-          <h2 className="text-sm font-semibold mb-4 text-gray-600 ">
-            Top người dùng tương tác
-          </h2>
-          {loadingData.topUser && <Skeleton />}
-          <div className="flex flex-col gap-4">
-            {topReactUsers.map((user, index) => (
-              <div className="flex gap-4 items-center">
-                <div className="px-4 py-1 bg-blue-600 text-white text-sm rounded font-semibold italic">
-                  Top {index + 1}
-                </div>
-                <div className="flex items-center gap-2">
-                  <img
-                    src={user.avatar || faker.image.avatar()}
-                    alt=""
-                    className="w-8 h-8 object-cover rounded-full"
-                  />
-                  <div className="text-lg">
-                    {user.username || user.email.split("@")[0]}
+      <Col xs={24} lg={6}>
+        <Card
+          title={
+            <Space>
+              <TrophyOutlined className="text-yellow-500" /> 
+              <Text strong>Top người dùng tương tác</Text>
+            </Space>
+          }
+          className="sticky top-20"
+          bordered={false}
+          style={{ height: 'fit-content' }}
+        >
+          {loadingData.topUser ? (
+            <Skeleton active avatar paragraph={{ rows: 5 }} />
+          ) : (
+            <div className="space-y-5">
+              {topReactUsers.map((user, index) => (
+                <div key={index} className="flex items-center gap-3">
+                  <Badge count={index + 1} color={index < 3 ? "gold" : "blue"} offset={[-8, 36]}>
+                    <Avatar 
+                      src={user.avatar || faker.image.avatar()} 
+                      size={42}
+                      icon={<UserOutlined />}
+                    />
+                  </Badge>
+                  <div>
+                    <Text strong className="block">
+                      {user.username || user.email.split("@")[0]}
+                    </Text>
+                    <Text type="secondary" className="text-xs">
+                      {Math.floor(Math.random() * 100) + 5} câu hỏi
+                    </Text>
                   </div>
                 </div>
-              </div>
-            ))}
-          </div>
-        </aside>
-      </div>
+              ))}
+            </div>
+          )}
+        </Card>
+      </Col>
     ),
     [loadingData.topUser, topReactUsers],
   );
@@ -208,87 +247,107 @@ function FAQ() {
 
   const questionRender = useMemo(
     () => (
-      <div className="w-4/5 rounded pb-4 px-2">
-        <div className="flex gap-2 bg-slate-400 rounded p-2 my-2">
-          <img
-            src={faker.image.avatar()}
-            className="rounded-full w-7 h-7 border"
-            alt={faker.name.firstName()}
-          />
-          <div className="rounded-md bg-gray-500 flex-1 flex flex-col">
-            {uploadUrls.length > 0 && (
-              <div className="flex gap-4  z-30   rounded p-2">
-                {uploadUrls.map((link, index) => (
-                  <div className="relative bg-white p-1 rounded">
-                    <ImageUploadPreview src={link} index={index} />
-                  </div>
-                ))}
-              </div>
-            )}
-            <textarea
-              value={questionText}
-              onChange={(e) => setQuestionText(e.target.value)}
-              type="text"
-              placeholder="Bạn đang thắc mắc điều gì, đăng câu hỏi ngay..."
-              className="bg-gray-500 text-white px-2 outline-none py-2 rounded-md"
-            />
-            <div className="flex justify-between items-center p-2">
-              <input
-                id={`file-input-question`}
-                className="hidden"
-                multiple
-                type="file"
-                onChange={(e) => handleUploadImageQuestion(e)}
-                accept={"image/*"}
+      <Col xs={24} lg={18}>
+        <Card bordered={false} className="mb-4">
+          <div className="flex gap-3 mb-2">
+            <Avatar src={faker.image.avatar()} />
+            <div className="flex-1">
+              <TextArea
+                value={questionText}
+                onChange={(e) => setQuestionText(e.target.value)}
+                placeholder="Bạn đang thắc mắc điều gì, đăng câu hỏi ngay..."
+                autoSize={{ minRows: 2, maxRows: 6 }}
+                className="mb-3"
               />
-              <label htmlFor={`file-input-question`}>
-                <Tooltip title={"Tải ảnh lên"}>
-                  <Icons.FaCameraRetro
-                    size={20}
-                    className="cursor-pointer text-slate-200"
+              
+              {uploadUrls.length > 0 && (
+                <div className="flex flex-wrap gap-3 mb-3 border-t border-b py-3 bg-gray-50">
+                  {uploadUrls.map((link, index) => (
+                    <ImageUploadPreview key={index} src={link} index={index} />
+                  ))}
+                </div>
+              )}
+              
+              <div className="flex justify-between">
+                <div>
+                  <input
+                    id="file-input-question"
+                    className="hidden"
+                    multiple
+                    type="file"
+                    onChange={(e) => handleUploadImageQuestion(e)}
+                    accept="image/*"
                   />
-                </Tooltip>
-              </label>
-
-              <Icons.IoMdSend
-                onClick={() => handleCreateQuestion()}
-                size={28}
-                className="cursor-pointer text-blue-500"
-              />
+                  <Tooltip title="Tải ảnh lên">
+                    <Button 
+                      icon={<CameraOutlined />}
+                      onClick={() => document.getElementById('file-input-question').click()}
+                    >
+                      Thêm ảnh
+                    </Button>
+                  </Tooltip>
+                </div>
+                
+                <Button 
+                  type="primary" 
+                  icon={<SendOutlined />}
+                  onClick={handleCreateQuestion}
+                >
+                  Gửi câu hỏi
+                </Button>
+              </div>
             </div>
           </div>
-        </div>
-        <div className="flex flex-col gap-4">
-          {question?.content
-            ?.sort(
-              (a, b) =>
-                new Date(b.updatedAt).getTime() -
-                new Date(a.updatedAt).getTime(),
-            )
-            .map((el, index) => (
-              <Question
-                data={el}
-                index={index}
-                indexShowComment={indexShowComment}
-                setIndexShowComment={setIndexShowComment}
-                setData={(data) => {
-                  setQuestion((prevData) => {
-                    const updatedContent = [...prevData.content];
-                    updatedContent[index] = data;
-                    return {
-                      ...prevData,
-                      content: updatedContent,
-                    };
-                  });
-                }}
-              />
-            ))}
-        </div>
-        {loadingData.question && (
-          <HashLoader size={100} color="#b683df" className="mx-auto mt-20" />
+        </Card>
+        
+        <Divider orientation="left">
+          <Space>
+            <CommentOutlined />
+            <span>Danh sách câu hỏi</span>
+          </Space>
+        </Divider>
+        
+        {loadingData.question ? (
+          <div className="flex justify-center py-10">
+            <HashLoader size={60} color="#1890ff" />
+          </div>
+        ) : question?.content?.length === 0 ? (
+          <Empty 
+            description="Chưa có câu hỏi nào" 
+            image={Empty.PRESENTED_IMAGE_SIMPLE}
+          />
+        ) : (
+          <div className="space-y-4">
+            {question?.content
+              ?.sort(
+                (a, b) =>
+                  new Date(b.updatedAt).getTime() -
+                  new Date(a.updatedAt).getTime(),
+              )
+              .map((el, index) => (
+                <Question
+                  key={el.id}
+                  data={el}
+                  index={index}
+                  indexShowComment={indexShowComment}
+                  setIndexShowComment={setIndexShowComment}
+                  setData={(data) => {
+                    setQuestion((prevData) => {
+                      const updatedContent = [...prevData.content];
+                      updatedContent[index] = data;
+                      return {
+                        ...prevData,
+                        content: updatedContent,
+                      };
+                    });
+                  }}
+                />
+              ))}
+          </div>
         )}
-        {question && (
-          <div class="flex w-full justify-end p-2 ">
+        
+        {question && question.content?.length > 0 && (
+          <div className="flex justify-end mt-6">
             <Pagination
               listLimit={[10, 25, 40, 100]}
               limitCurrent={limit}
@@ -300,7 +359,7 @@ function FAQ() {
             />
           </div>
         )}
-      </div>
+      </Col>
     ),
     [
       question,
@@ -313,10 +372,16 @@ function FAQ() {
   );
 
   return (
-    <div className="flex flex-col">
-      <div className="bg-gray-100 min-h-screen flex pt-10 px-2 gap-2 md:px-8">
-        {topQuestionUserPanel}
-        {questionRender}
+    <div className="bg-gray-50 min-h-screen py-6 px-4">
+      <div className="max-w-7xl mx-auto">
+        <Title level={2} className="text-center mb-8">
+          Hỏi đáp cộng đồng
+        </Title>
+        
+        <Row gutter={[24, 24]}>
+          {topQuestionUserPanel}
+          {questionRender}
+        </Row>
       </div>
     </div>
   );

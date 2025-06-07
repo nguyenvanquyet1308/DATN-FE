@@ -1,10 +1,39 @@
-import { Button, DatePicker, Modal, notification, Skeleton, Tabs } from "antd";
+import { useEffect, useState } from "react";
+import { 
+  Button, 
+  DatePicker, 
+  Modal, 
+  notification, 
+  Skeleton, 
+  Tabs, 
+  Card, 
+  Typography, 
+  Input, 
+  Space, 
+  Tag, 
+  Empty, 
+  Image, 
+  Badge, 
+  Divider 
+} from "antd";
+import { 
+  SearchOutlined, 
+  ShoppingOutlined, 
+  CalendarOutlined, 
+  HistoryOutlined, 
+  ShopOutlined, 
+  FileTextOutlined,
+  FileDoneOutlined,
+  ClockCircleOutlined,
+  RedoOutlined,
+  EyeOutlined,
+  CloseCircleOutlined
+} from '@ant-design/icons';
 import { changeOrderStatus, getOrders } from "apis/order.api";
 import paths from "constant/paths";
 import useDebounce from "hooks/useDebounce";
 import moment from "moment";
 import Pagination from "pages/admin/components/Pagination";
-import { useEffect, useState } from "react";
 import { generatePath, useNavigate } from "react-router-dom";
 import { convertStatusOrder } from "utils/covertDataUI";
 import { formatMoney, trunCateText } from "utils/helper";
@@ -12,7 +41,10 @@ import Icons from "utils/icons";
 import OrderReviewForm from "./OrderReviewForm";
 import { setSelectedCart } from "store/slicers/cart.slicer";
 import { useDispatch } from "react-redux";
+
 const { confirm } = Modal;
+const { Title, Text, Paragraph } = Typography;
+const { RangePicker } = DatePicker;
 
 function OrderHistory() {
   const navigate = useNavigate();
@@ -29,6 +61,7 @@ function OrderHistory() {
   const [searchKeyword, setSearchKeyword] = useState("");
   const keyDebounce = useDebounce(searchKeyword, 400);
   const dispatch = useDispatch();
+
   const fetchOrders = async () => {
     setOrderData((prev) => ({ ...prev, isLoading: true }));
     try {
@@ -52,8 +85,10 @@ function OrderHistory() {
       setOrderData((prev) => ({ ...prev, data: res?.result }));
     } catch (error) {
       notification.warning({
-        message: error.message,
-        duration: 2,
+        message: "Lỗi khi tải dữ liệu",
+        description: error.message,
+        duration: 3,
+        placement: "top",
       });
     }
     setOrderData((prev) => ({ ...prev, isLoading: false }));
@@ -75,62 +110,93 @@ function OrderHistory() {
   const tabItems = [
     {
       key: "All",
-      label: <p className="text-lg text-blue-500">Tất cả đơn</p>,
+      label: (
+        <Space>
+          <ShoppingOutlined />
+          Tất cả đơn
+        </Space>
+      ),
     },
     {
       key: "UNPAID",
-      label: <p className="text-lg text-yellow-500">Chờ thanh toán</p>,
+      label: (
+        <Space>
+          <ClockCircleOutlined />
+          Chờ thanh toán
+        </Space>
+      ),
     },
     {
       key: "PENDING",
-      label: <p className="text-lg text-orange-500">Đang xử lí</p>,
+      label: (
+        <Space>
+          <HistoryOutlined />
+          Đang xử lí
+        </Space>
+      ),
     },
     {
       key: "SHIPPED",
-      label: <p className="text-lg text-purple-500">Đang vận chuyển</p>,
+      label: (
+        <Space>
+          <ShopOutlined />
+          Đang vận chuyển
+        </Space>
+      ),
     },
     {
       key: "DELIVERED",
-      label: <p className="text-lg text-green-500">Đã giao</p>,
+      label: (
+        <Space>
+          <FileDoneOutlined />
+          Đã giao
+        </Space>
+      ),
     },
     {
       key: "CANCELLED",
-      label: <p className="text-lg text-red-500">Đã hủy</p>,
+      label: (
+        <Space>
+          <CloseCircleOutlined />
+          Đã hủy
+        </Space>
+      ),
     },
   ];
 
   const OrderItemSkeleton = () => (
-    <div className="bg-white p-4">
-      <div className="border-b p-3">
-        <Skeleton.Input active size="small" style={{ width: 200 }} />
-      </div>
-      <div className="border-b py-3 flex justify-between">
+    <Card className="mb-4">
+      <Skeleton.Input active size="small" style={{ width: 200, marginBottom: 16 }} />
+      <div className="flex justify-between mb-4">
         <div className="flex gap-4">
           <Skeleton.Image active style={{ width: 96, height: 96 }} />
           <div className="flex flex-col gap-3">
+            <Skeleton.Input active size="small" style={{ width: 200 }} />
             <Skeleton.Input active size="small" style={{ width: 120 }} />
-            <Skeleton.Input active size="small" style={{ width: 80 }} />
           </div>
         </div>
-
         <div>
           <Skeleton.Input active size="small" style={{ width: 100 }} />
         </div>
       </div>
-      <div className="flex flex-col items-end gap-3">
-        <Skeleton.Input active size="small" style={{ width: 150 }} />
-        <div className="flex gap-2">
-          <Skeleton.Button active size="small" style={{ width: 100 }} />
-          <Skeleton.Button active size="small" style={{ width: 100 }} />
+      <div className="flex justify-end">
+        <div className="flex flex-col items-end gap-2">
+          <Skeleton.Input active size="small" style={{ width: 150 }} />
+          <div className="flex gap-2">
+            <Skeleton.Button active size="small" style={{ width: 90 }} />
+            <Skeleton.Button active size="small" style={{ width: 90 }} />
+          </div>
         </div>
       </div>
-    </div>
+    </Card>
   );
 
   const handleCancelOrder = (id) => {
     confirm({
-      title: "Bạn có chắc chắn muốn Hủy đơn hàng này chứ ?",
+      title: "Xác nhận hủy đơn",
+      content: "Bạn có chắc chắn muốn hủy đơn hàng này không?",
       okText: "Đồng ý",
+      okButtonProps: { danger: true },
       cancelText: "Không hủy",
       async onOk() {
         try {
@@ -138,12 +204,15 @@ function OrderHistory() {
           notification.success({
             message: "Hủy đơn hàng thành công",
             duration: 2,
+            placement: "top",
           });
           fetchOrders();
         } catch (error) {
-          notification.warning({
-            message: error.message,
-            duration: 2,
+          notification.error({
+            message: "Lỗi khi hủy đơn hàng",
+            description: error.message,
+            duration: 3,
+            placement: "top",
           });
         }
       },
@@ -155,14 +224,26 @@ function OrderHistory() {
     navigate(paths.CHECKOUT.PAYMENT);
   };
 
+  const handleRangePickerChange = (dates) => {
+    if (dates) {
+      setStartDate(dates[0]);
+      setEndDate(dates[1]);
+    } else {
+      setStartDate(null);
+      setEndDate(null);
+    }
+  };
+
   return (
-    <div className="flex flex-col gap-2">
+    <div className="order-history-container">
       <Modal
+        title={<Title level={4}>Đánh giá sản phẩm</Title>}
         width={1000}
         open={reviewFormModalData}
         onCancel={() => setReviewFormModalData(null)}
         destroyOnClose
         footer={false}
+        centered
       >
         <OrderReviewForm
           data={reviewFormModalData}
@@ -170,182 +251,194 @@ function OrderHistory() {
           fetchData={() => fetchOrders()}
         />
       </Modal>
-      <h1 className="text-2xl mb-4">Đơn hàng của bạn</h1>
-      <div className="rounded">
-        <Tabs
-          defaultActiveKey="1"
-          items={tabItems}
-          className="w-full bg-white px-2"
-          onChange={(key) => {
-            if (key === "All") setSelectedStatus(null);
-            else setSelectedStatus(key);
-          }}
-        />
+
+      <div className="mb-6">
+        <Title level={2} className="mb-1">Đơn Hàng Của Bạn</Title>
+        <Text type="secondary">Quản lý và theo dõi tất cả đơn hàng của bạn</Text>
       </div>
-      <div className="flex gap-4 ">
-        <div className="bg-white flex rounded items-center px-2 flex-1">
-          <Icons.IoIosSearch className="font-bold text-lg" />
-          <input
-            type="text"
-            placeholder="Tìm kiếm đơn thuê theo code & tên sản phẩm..."
-            className="w-full px-4 py-2 outline-none"
+
+      <Card 
+        className="mb-4 shadow-sm"
+        tabList={tabItems}
+        activeTabKey={selectedStatus || "All"}
+        onTabChange={(key) => {
+          if (key === "All") setSelectedStatus(null);
+          else setSelectedStatus(key);
+        }}
+      >
+        <div className="flex flex-col md:flex-row gap-4">
+          <Input.Search
+            placeholder="Tìm kiếm đơn hàng theo mã đơn hoặc tên sản phẩm..."
             value={searchKeyword}
             onChange={(e) => setSearchKeyword(e.target.value)}
+            onSearch={(value) => setSearchKeyword(value)}
+            enterButton={<SearchOutlined />}
+            allowClear
+            className="flex-grow"
           />
-          <div className="text-nowrap text-blue-500 px-2 border-l border-gray-400 cursor-pointer">
-            Tìm đơn thuê
-          </div>
+          
+          <RangePicker
+            placeholder={['Từ ngày', 'Đến ngày']}
+            value={startDate && endDate ? [startDate, endDate] : null}
+            onChange={handleRangePickerChange}
+            className="w-full md:w-auto"
+          />
         </div>
-        <div className="bg-white rounded px-2 flex items-center gap-4">
-          <div className="flex gap-2 items-center">
-            <p>Từ </p>
-            <DatePicker
-              value={startDate}
-              placeholder="chọn ngày"
-              onChange={(date) => setStartDate(date)}
-            />
-          </div>
-          <div className="flex gap-2 items-center">
-            <p>Đến </p>
-            <DatePicker
-              placeholder="chọn ngày"
-              value={endDate}
-              onChange={(date) => setEndDate(date)}
-            />
-          </div>
-        </div>
-      </div>
-      <div className="flex flex-col gap-4">
+      </Card>
+
+      <div className="orders-list">
         {orderData.isLoading ? (
           <>
             <OrderItemSkeleton />
             <OrderItemSkeleton />
             <OrderItemSkeleton />
           </>
+        ) : orderData.data?.content?.length === 0 ? (
+          <Card className="text-center py-8">
+            <Empty
+              image={Empty.PRESENTED_IMAGE_SIMPLE}
+              description="Không tìm thấy đơn hàng nào"
+            />
+          </Card>
         ) : (
-          orderData.data?.content?.map((el) => (
-            <div className="bg-white p-2" key={el.id}>
-              <div
-                className={`border-b p-2 font-bold ${
-                  convertStatusOrder(el.status)?.textColor
-                }`}
+          orderData.data?.content?.map((el) => {
+            const status = convertStatusOrder(el.status);
+            
+            return (
+              <Card 
+                key={el.id} 
+                className="mb-4 hover:shadow-md transition-all duration-300"
+                title={
+                  <div className="flex justify-between items-center">
+                    <Badge status={status?.badgeStatus || "default"} text={status?.text} />
+                    <Text type="secondary">
+                      <CalendarOutlined className="mr-2" />
+                      Đặt lúc: {moment(new Date(el?.createdAt)).format("HH:mm:ss DD/MM/YYYY")}
+                    </Text>
+                  </div>
+                }
               >
-                <span>{convertStatusOrder(el.status)?.text}</span>
-              </div>
-              {el.orderDetails?.map((orderDetail) => (
-                <div
-                  className="border-b py-2 flex justify-between"
-                  key={orderDetail.id}
-                >
-                  <div className="flex gap-2">
-                    <div className=" border  p-2 rounded">
-                      <img
-                        src={orderDetail.sku.images.split(",")[0]}
-                        alt=""
-                        className=" w-24 h-24 object-contain"
-                      />
+                {el.orderDetails?.map((orderDetail) => (
+                  <div 
+                    key={orderDetail.id}
+                    className="border-b py-4 flex flex-col md:flex-row justify-between"
+                  >
+                    <div className="flex gap-4">
+                      <div className="flex-shrink-0 overflow-hidden rounded">
+                        <Image
+                          src={orderDetail.sku.images.split(",")[0]}
+                          alt={orderDetail.productName}
+                          width={96}
+                          height={96}
+                          className="object-cover rounded"
+                          preview={false}
+                        />
+                      </div>
+                      
+                      <div className="flex flex-col gap-2">
+                        <Text strong className="text-blue-600 hover:text-blue-800">
+                          {trunCateText(orderDetail.productName, 44)}
+                        </Text>
+                        
+                        <Space>
+                          <Text type="secondary">Số lượng:</Text>
+                          <Tag color="blue">{orderDetail.quantity}</Tag>
+                        </Space>
+                        
+                        <img
+                          src="https://salt.tikicdn.com/ts/ta/b1/3f/4e/cc3d0a2dd751a7b06dd97d868d6afa56.png"
+                          className="w-40 h-6 object-cover"
+                          alt="Đảm bảo hoàn tiền"
+                        />
+                      </div>
                     </div>
-                    <div className="flex flex-col gap-2">
-                      <p className="font-bold">
-                        {trunCateText(orderDetail.productName, 44)}
-                      </p>
-                      <p className="flex items-center gap-2">
-                        <span className="text-gray-500">Số lượng:</span>
-                        <span className="font-bold">
-                          {orderDetail.quantity}
-                        </span>
-                      </p>
-                      <img
-                        src={
-                          "https://salt.tikicdn.com/ts/ta/b1/3f/4e/cc3d0a2dd751a7b06dd97d868d6afa56.png"
-                        }
-                        className="w-40 h-6 object-cover"
-                        alt="img refund"
-                      />
-                    </div>
-                  </div>
-                  <div className="flex flex-col">
-                    <div className="text-gray-700 text-nowrap">
-                      {formatMoney(orderDetail.quantity * orderDetail.price)} đ
-                    </div>
-                    {!orderDetail.isReview && el.status == "DELIVERED" && (
-                      <Button
-                        className="mt-auto bg-primary text-white"
-                        onClick={() => setReviewFormModalData(orderDetail)}
-                      >
-                        Đánh giá
-                      </Button>
-                    )}
-                  </div>
-                </div>
-              ))}
-              <div className="flex justify-between mt-2">
-                <div className="text-primary italic">
-                  Bạn đã đặt vào :{" "}
-                  {moment(new Date(el?.createdAt)).format(
-                    "HH:MM:SS DD-MM-YYYY",
-                  )}
-                </div>
-                <div className="flex flex-col items-end gap-2">
-                  {el?.discountValue > 0 && (
-                    <p>
-                      <span className="text-gray-600">
-                        Đã giảm từ voucher :{" "}
-                      </span>
-                      <span className="text-yellow-700">
-                        {formatMoney(el.discountValue)} đ
-                      </span>
-                    </p>
-                  )}
-                  <p>
-                    <span className="text-gray-600">Tổng tiền: </span>
-                    <span className="font-bold">
-                      {formatMoney(el.total_amount)} đ
-                    </span>
-                  </p>
-                  <p className="flex gap-2">
-                    {(el.status === "CANCELLED" ||
-                      el.status === "DELIVERED" ||
-                      el.status === "UNPAID") && (
-                      <Button
-                        className="text-blue-600 border-blue-600"
-                        onClick={() => handlePayment(el?.orderDetails)}
-                      >
-                        Mua lại
-                      </Button>
-                    )}
-
-                    {el.status === "PENDING" &&
-                      el?.payment?.method === "COD" && (
+                    
+                    <div className="flex flex-col items-end mt-4 md:mt-0">
+                      <Text strong className="text-red-500 text-lg">
+                        {formatMoney(orderDetail.quantity * orderDetail.price)} đ
+                      </Text>
+                      
+                      {!orderDetail.isReview && el.status === "DELIVERED" && (
                         <Button
-                          className="text-white bg-red-500"
-                          onClick={() => handleCancelOrder(el.id)}
+                          type="primary"
+                          icon={<FileTextOutlined />}
+                          onClick={() => setReviewFormModalData(orderDetail)}
+                          className="mt-2"
                         >
-                          Hủy
+                          Đánh giá
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+                
+                <div className="flex flex-col md:flex-row justify-between mt-4 pt-2">
+                  <div></div>
+                  <div className="flex flex-col items-end gap-2">
+                    {el?.discountValue > 0 && (
+                      <div>
+                        <Text type="secondary">Giảm từ voucher: </Text>
+                        <Text className="text-green-600 font-medium">
+                          -{formatMoney(el.discountValue)} đ
+                        </Text>
+                      </div>
+                    )}
+                    
+                    <div>
+                      <Text type="secondary">Tổng tiền: </Text>
+                      <Text strong className="text-xl text-red-600">
+                        {formatMoney(el.total_amount)} đ
+                      </Text>
+                    </div>
+                    
+                    <Space className="mt-2">
+                      {(el.status === "CANCELLED" ||
+                        el.status === "DELIVERED" ||
+                        el.status === "UNPAID") && (
+                        <Button
+                          type="default"
+                          icon={<RedoOutlined />}
+                          onClick={() => handlePayment(el?.orderDetails)}
+                        >
+                          Mua lại
                         </Button>
                       )}
 
-                    <Button
-                      className="text-blue-600 border-blue-600"
-                      onClick={() =>
-                        navigate(
-                          generatePath(paths.MEMBER.DETAIL_ORDER, {
-                            id: el.id,
-                          }),
-                        )
-                      }
-                    >
-                      Xem chi tiết
-                    </Button>
-                  </p>
+                      {el.status === "PENDING" &&
+                        el?.payment?.method === "COD" && (
+                          <Button
+                            danger
+                            icon={<CloseCircleOutlined />}
+                            onClick={() => handleCancelOrder(el.id)}
+                          >
+                            Hủy
+                          </Button>
+                        )}
+
+                      <Button
+                        type="primary"
+                        icon={<EyeOutlined />}
+                        onClick={() =>
+                          navigate(
+                            generatePath(paths.MEMBER.DETAIL_ORDER, {
+                              id: el.id,
+                            }),
+                          )
+                        }
+                      >
+                        Chi tiết
+                      </Button>
+                    </Space>
+                  </div>
                 </div>
-              </div>
-            </div>
-          ))
+              </Card>
+            );
+          })
         )}
       </div>
-      {orderData.data?.content && (
-        <div class="flex w-full justify-end p-2 ">
+      
+      {orderData.data?.content && orderData.data.content.length > 0 && (
+        <div className="flex justify-end mt-4">
           <Pagination
             listLimit={[10, 25, 40, 100]}
             limitCurrent={limit}
@@ -357,6 +450,23 @@ function OrderHistory() {
           />
         </div>
       )}
+
+      <style jsx global>{`
+        .order-history-container .ant-card {
+          border-radius: 8px;
+          overflow: hidden;
+        }
+        
+        .order-history-container .ant-tabs-tab.ant-tabs-tab-active .ant-tabs-tab-btn {
+          font-weight: 600;
+        }
+        
+        @media (max-width: 768px) {
+          .orders-list .ant-card-body {
+            padding: 16px;
+          }
+        }
+      `}</style>
     </div>
   );
 }

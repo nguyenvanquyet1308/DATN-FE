@@ -1,4 +1,4 @@
-import { notification } from "antd";
+import { Avatar, Button, Card, Divider, Empty, Form, Input, List, Popover, notification, Typography } from "antd";
 import {
   createComment,
   createReply,
@@ -17,6 +17,38 @@ import { changeLoading } from "store/slicers/common.slicer";
 import img from "assets/images/AvatarDefault.jpg";
 import Icons from "utils/icons";
 import EmojiPicker from "emoji-picker-react";
+import { SmileOutlined, SendOutlined, SettingOutlined, EditOutlined, DeleteOutlined, WarningOutlined, CommentOutlined } from "@ant-design/icons";
+
+const { TextArea } = Input;
+const { Title, Text } = Typography;
+
+// Tự tạo component Comment vì Ant Design không export Comment
+const CustomComment = ({ author, avatar, content, datetime, actions, children }) => {
+  return (
+    <div className="ant-comment">
+      <div className="ant-comment-inner">
+        <div className="ant-comment-avatar">
+          {avatar}
+        </div>
+        <div className="ant-comment-content">
+          <div className="ant-comment-content-author">
+            <span className="ant-comment-content-author-name">{author}</span>
+            <span className="ant-comment-content-author-time">{datetime}</span>
+          </div>
+          <div className="ant-comment-content-detail">{content}</div>
+          {actions && actions.length > 0 && (
+            <ul className="ant-comment-actions">
+              {actions.map((action, index) => (
+                <li key={`action-${index}`}>{action}</li>
+              ))}
+            </ul>
+          )}
+          {children}
+        </div>
+      </div>
+    </div>
+  );
+};
 
 const CommentBlog = ({ checkLoginBeforeAction }) => {
   const { blogId } = useParams();
@@ -40,6 +72,7 @@ const CommentBlog = ({ checkLoginBeforeAction }) => {
       setNewComment((prevComment) => prevComment + emojiObject.emoji);
     }
   };
+  
   const handleEditCommentClick = (commentId) => {
     if (editCommentId === commentId) {
       setEditCommentId(null);
@@ -47,6 +80,7 @@ const CommentBlog = ({ checkLoginBeforeAction }) => {
       setEditCommentId(commentId);
     }
   };
+  
   const handleEditReplyClick = (ReplyId) => {
     if (editReplyId === ReplyId) {
       setEditReplyId(null);
@@ -54,32 +88,35 @@ const CommentBlog = ({ checkLoginBeforeAction }) => {
       setEditReplyId(ReplyId);
     }
   };
+  
   const handleUpdateComment = async (CommentId) => {
     dispatch(changeLoading());
     try {
       await putComment(CommentId, editedComment);
       setEditedComment("");
       setEditCommentId(null);
-      notification.success({ message: "update bình luận thành công" });
+      notification.success({ message: "Cập nhật bình luận thành công", placement: "top" });
       fetchComments(blogId);
     } catch (error) {
       console.log("Lỗi khi trả lời comment: ", error);
     }
     dispatch(changeLoading());
   };
+  
   const handleUpdateReply = async (ReplyId) => {
     dispatch(changeLoading());
     try {
       await putReply(ReplyId, editedReply);
       setEditedReply("");
       setEditReplyId(null);
-      notification.success({ message: "update bình luận thành công" });
+      notification.success({ message: "Cập nhật bình luận thành công", placement: "top" });
       fetchComments(blogId);
     } catch (error) {
       console.log("Lỗi khi trả lời comment: ", error);
     }
     dispatch(changeLoading());
   };
+  
   const toggleDropdown = (commentId) => {
     if (activeDropdown === commentId) {
       setActiveDropdown(null);
@@ -109,10 +146,14 @@ const CommentBlog = ({ checkLoginBeforeAction }) => {
     if (newComment.length < 1) {
       return notification.warning({
         message: "Vui lòng điền bình luận của bạn!",
+        placement: "top"
       });
     }
     if (newComment.length > 500) {
-      return notification.warning({ message: "Bình luận của bạn quá dài!" });
+      return notification.warning({ 
+        message: "Bình luận của bạn quá dài!",
+        placement: "top" 
+      });
     }
     dispatch(changeLoading());
     try {
@@ -123,7 +164,10 @@ const CommentBlog = ({ checkLoginBeforeAction }) => {
       });
       setNewComment("");
       fetchComments(blogId);
-      notification.success({ message: "Bình luận thành công!" });
+      notification.success({ 
+        message: "Bình luận thành công!",
+        placement: "top" 
+      });
     } catch (error) {
       console.log("Lỗi khi tạo comment: ", error);
     }
@@ -134,15 +178,17 @@ const CommentBlog = ({ checkLoginBeforeAction }) => {
     if (replyContent.length < 1) {
       return notification.warning({
         message: "Vui lòng điền bình luận của bạn!",
+        placement: "top"
       });
     }
     if (replyContent.length > 500) {
-      return notification.warning({ message: "Bình luận của bạn quá dài!" });
+      return notification.warning({ 
+        message: "Bình luận của bạn quá dài!",
+        placement: "top" 
+      });
     }
     dispatch(changeLoading());
     try {
-      console.log("thông tin: ", replyContent);
-
       await createReply({
         content: replyContent[parentCommentId],
         commentId: parentCommentId,
@@ -150,8 +196,8 @@ const CommentBlog = ({ checkLoginBeforeAction }) => {
       });
       setReplyContent((prev) => ({ ...prev, [parentCommentId]: "" }));
       notification.success({
-        message: "Bạn đã trả lời bình luận của!",
-        parentCommentId,
+        message: "Bạn đã trả lời bình luận thành công!",
+        placement: "top",
       });
       fetchComments(blogId);
     } catch (error) {
@@ -164,10 +210,14 @@ const CommentBlog = ({ checkLoginBeforeAction }) => {
     if (replyToReplyContent.length < 1) {
       return notification.warning({
         message: "Vui lòng điền bình luận của bạn!",
+        placement: "top"
       });
     }
     if (replyToReplyContent.length > 500) {
-      return notification.warning({ message: "Bình luận của bạn quá dài!" });
+      return notification.warning({ 
+        message: "Bình luận của bạn quá dài!",
+        placement: "top" 
+      });
     }
     dispatch(changeLoading());
     try {
@@ -177,11 +227,10 @@ const CommentBlog = ({ checkLoginBeforeAction }) => {
         userId: userInfo.id,
         parentReplyId: ReplyId,
       });
-      setReplyToReplyContent((prev) => ({ ...prev, [commentId]: "" }));
-      setReplyToReplyContent("");
+      setReplyToReplyContent((prev) => ({ ...prev, [ReplyId]: "" }));
       notification.success({
-        message: "Bạn đã trả lời bình luận của!",
-        ReplyId,
+        message: "Bạn đã trả lời bình luận thành công!",
+        placement: "top",
       });
       fetchComments(blogId);
     } catch (error) {
@@ -195,18 +244,25 @@ const CommentBlog = ({ checkLoginBeforeAction }) => {
     try {
       await deleteComment(commentId);
       fetchComments(blogId);
-      notification.success({ message: "Xóa bình luận thành công!" });
+      notification.success({ 
+        message: "Xóa bình luận thành công!",
+        placement: "top" 
+      });
     } catch (error) {
       console.log("Lỗi khi xóa bình luận: ", error);
     }
     dispatch(changeLoading());
   };
+  
   const handleRemoveReplyComment = async (replyId) => {
     dispatch(changeLoading());
     try {
       await deleteReply(replyId);
       fetchComments(blogId);
-      notification.success({ message: "Xóa bình luận thành công!" });
+      notification.success({ 
+        message: "Xóa bình luận thành công!",
+        placement: "top" 
+      });
     } catch (error) {
       console.log("Lỗi khi xóa bình luận: ", error);
     }
@@ -221,341 +277,348 @@ const CommentBlog = ({ checkLoginBeforeAction }) => {
     console.log("Dữ liệu comment: ", comments);
   }, [comments]);
 
+  // Tạo menu cho dropdown của comment
+  const getCommentActions = (comment) => {
+    const menu = [];
+    if (userInfo && comment.user_id === userInfo.id) {
+      menu.push({
+        key: 'edit',
+        label: 'Chỉnh sửa',
+        icon: <EditOutlined />,
+        onClick: () => handleEditCommentClick(comment.commentId)
+      });
+      menu.push({
+        key: 'delete',
+        label: 'Xóa',
+        icon: <DeleteOutlined />,
+        onClick: () => handleRemoveComment(comment.commentId),
+        danger: true
+      });
+    }
+    menu.push({
+      key: 'report',
+      label: 'Báo cáo',
+      icon: <WarningOutlined />,
+      onClick: () => {}
+    });
+    return menu;
+  };
+
+  // Tạo menu cho dropdown của reply
+  const getReplyActions = (reply) => {
+    const menu = [];
+    if (userInfo && reply.user_id === userInfo.id) {
+      menu.push({
+        key: 'edit',
+        label: 'Chỉnh sửa',
+        icon: <EditOutlined />,
+        onClick: () => handleEditReplyClick(reply.replyId)
+      });
+      menu.push({
+        key: 'delete',
+        label: 'Xóa',
+        icon: <DeleteOutlined />,
+        onClick: () => handleRemoveReplyComment(reply.replyId),
+        danger: true
+      });
+    }
+    menu.push({
+      key: 'report',
+      label: 'Báo cáo',
+      icon: <WarningOutlined />,
+      onClick: () => {}
+    });
+    return menu;
+  };
+
   return (
-    <div>
-      <section className="bg-white dark:bg-gray-900 py-8 lg:py-16 antialiased">
-        <div className="max-w-2xl mx-auto px-4">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-lg lg:text-2xl font-bold text-gray-900 dark:text-white">
-              Discussion ({comments.length})
-            </h2>
+    <div className="comment-blog-section py-8">
+      <Card bordered={false} className="comment-container max-w-4xl mx-auto">
+        <div className="flex justify-between items-center mb-6">
+          <Title level={4} className="m-0">
+            <CommentOutlined className="mr-2" />
+            Bình luận ({comments.length})
+          </Title>
+        </div>
+        
+        <Form className="mb-6">
+          <div className="relative">
+            <TextArea
+              value={newComment}
+              onChange={(e) => setNewComment(e.target.value)}
+              placeholder="Nhập bình luận của bạn..."
+              autoSize={{ minRows: 3, maxRows: 6 }}
+              className="rounded-lg transition-all"
+              maxLength={500}
+              showCount
+            />
+            <Button
+              type="text"
+              shape="circle"
+              icon={<SmileOutlined />}
+              onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+              className="absolute right-2 bottom-2"
+            />
           </div>
-          <form className="mb-6">
-            <div className="py-2 px-4 mb-4 bg-white rounded-lg rounded-t-lg border border-gray-200 dark:bg-gray-800 dark:border-gray-700">
-              <label htmlFor="comment" className="sr-only">
-                Your comment
-              </label>
-              <textarea
-                value={newComment}
-                onChange={(e) => setNewComment(e.target.value)}
-                id="comment"
-                rows="6"
-                className="px-0 w-full text-sm text-gray-900 border-0 focus:ring-0 focus:outline-none dark:text-white dark:placeholder-gray-400 dark:bg-gray-800"
-                placeholder="Nhập bình luận..."
-                required
-              ></textarea>
-              <button
-                type="button"
-                onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-                className="emoji-button flex items-end"
-              >
-                😀
-              </button>
-              {showEmojiPicker && (
-                <EmojiPicker
-                  onEmojiClick={handleEmojiClick}
-                  pickerStyle={{ position: "absolute", zIndex: 80 }}
-                />
-              )}
+          
+          {showEmojiPicker && (
+            <div className="relative z-10 mt-2">
+              <EmojiPicker
+                onEmojiClick={handleEmojiClick}
+                pickerStyle={{ width: '100%' }}
+              />
             </div>
-            <button
-              onClick={() =>
-                checkLoginBeforeAction(() => handleCreateComment(blogId))
-              }
-              type="button"
-              className="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 me-2 mb-2 dark:bg-blue-600 dark:hover:bg-blue-700 focus:outline-none dark:focus:ring-blue-800"
-            >
-              Bình luận
-            </button>
-          </form>
-
-          {comments &&
-            comments
-              .slice()
-              .reverse()
-              .map((comment) => (
-                <div>
-                  <article
-                    key={comment.commentId}
-                    className="p-6 text-base bg-white rounded-lg dark:bg-gray-900"
-                  >
-                    <footer className="flex justify-between items-center mb-2">
-                      <div className="flex items-center">
-                        <p className="inline-flex items-center mr-3 text-sm text-gray-900 dark:text-white font-semibold">
-                          <img
-                            className="mr-2 w-6 h-6 rounded-full"
-                            src={comment.avatar || img}
-                            alt="Michael Gough"
-                          />
-                          {comment?.userName}
-                        </p>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">
-                          {moment(comment?.createdAt).format(
-                            "HH:mm  DD/MM/YYYY",
-                          )}
-                        </p>
-                      </div>
-                      <div className="relative">
-                        <button
-                          onClick={() => toggleDropdown(comment.commentId)}
-                          className="absolute top-0 right-0 inline-flex items-center p-2 text-sm font-medium text-center text-gray-500 dark:text-gray-400 bg-white rounded-lg hover:bg-gray-100 focus:ring-4 focus:outline-none focus:ring-gray-50 dark:bg-gray-900 dark:hover:bg-gray-700 dark:focus:ring-gray-600"
-                          type="button"
-                        >
-                          <Icons.CiSettings size={25} />
-                          <span className="sr-only">Comment settings</span>
-                        </button>
-                        {activeDropdown === comment.commentId && userInfo && (
-                          <div className=" right-0 mt-2 z-10 w-36 bg-white rounded divide-y divide-gray-100 shadow dark:bg-gray-700 dark:divide-gray-600">
-                            <ul className="py-1 text-sm text-gray-700 dark:text-gray-200 z-50">
-                              {comment.user_id === userInfo.id && (
-                                <>
-                                  <li>
-                                    <a
-                                      className="block py-2 px-4 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white z-10"
-                                      onClick={() => {
-                                        handleEditCommentClick(
-                                          comment.commentId,
-                                        );
-                                      }}
-                                    >
-                                      Chỉnh sửa
-                                    </a>
-                                  </li>
-                                  <li>
-                                    <a
-                                      onClick={() =>
-                                        handleRemoveComment(comment.commentId)
-                                      }
-                                      className="block py-2 px-4 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white"
-                                    >
-                                      Xóa
-                                    </a>
-                                  </li>
-                                </>
-                              )}
-                              <li>
-                                <a className="block py-2 px-4 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white">
-                                  Báo Cáo
-                                </a>
-                              </li>
-                            </ul>
-                          </div>
-                        )}
-                      </div>
-                    </footer>
-                    <p className="text-gray-500 dark:text-gray-400">
-                      {comment.content}
-                    </p>
-                    <div className="flex items-center mt-4 space-x-4">
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setReplyContent((prev) => ({
-                            ...prev,
-                            [comment.commentId]: !prev[comment.commentId],
-                          }))
-                        }
-                        className="flex items-center text-sm text-gray-500 hover:underline dark:text-gray-400 font-medium"
-                      >
-                        <Icons.FaReply />
-                        Trả lời
-                      </button>
-                    </div>{" "}
-                    <br />
-                    {replyContent[comment.commentId] && (
-                      <div>
-                        <input
-                          type="text"
-                          placeholder="Nhập câu trả lời..."
-                          className="border rounded w-full p-2"
-                          onChange={(e) =>
-                            // setDataContentReplys(
-                            //     e.target.value,
-                            // )
-                            setReplyContent({
-                              ...replyContent,
-                              [comment.commentId]: e.target.value,
-                            })
-                          }
-                        />
-                        <button
-                          onClick={() =>
-                            checkLoginBeforeAction(() =>
-                              handleReply(comment.commentId),
-                            )
-                          }
-                          className="mt-2 text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5"
-                        >
-                          Trả lời
-                        </button>
-                      </div>
-                    )}
-                    {editCommentId === comment.commentId && (
-                      <div>
-                        <input
-                          type="text"
-                          value={editedComment}
-                          placeholder="Chỉnh sửa câu trả lời..."
-                          className="border rounded w-full p-2"
-                          onChange={(e) => setEditedComment(e.target.value)}
-                        />
-                        <button
-                          onClick={() =>
-                            checkLoginBeforeAction(() =>
-                              handleUpdateComment(comment.commentId),
-                            )
-                          }
-                          className="mt-2 text-white bg-green-700 hover:bg-green-800 font-medium rounded-lg text-sm px-5 py-2.5"
-                        >
-                          Lưu thay đổi
-                        </button>
-                      </div>
-                    )}
-                  </article>
-                  {comment.replyResponse.map((reply) => (
-                    <article
-                      key={reply.replyId}
-                      className="p-3 mb-3 ml-6 lg:ml-12 text-base bg-white rounded-lg dark:bg-gray-900"
+          )}
+          
+          <Button
+            onClick={() => checkLoginBeforeAction(() => handleCreateComment(blogId))}
+            type="primary"
+            icon={<SendOutlined />}
+            className="mt-3"
+          >
+            Gửi bình luận
+          </Button>
+        </Form>
+        
+        <Divider />
+        
+        <List
+          className="comment-list"
+          itemLayout="horizontal"
+          locale={{ emptyText: <Empty description="Chưa có bình luận" image={Empty.PRESENTED_IMAGE_SIMPLE} /> }}
+          dataSource={comments.slice().reverse()}
+          renderItem={(comment) => (
+            <List.Item key={comment.commentId} className="comment-item mb-4 p-0 border-0">
+              <Card 
+                className="w-full transition-shadow hover:shadow-md" 
+                bordered={false}
+                bodyStyle={{ padding: '16px' }}
+              >
+                <CustomComment
+                  avatar={<Avatar src={comment.avatar || img} alt={comment.userName} />}
+                  author={<Text strong>{comment.userName}</Text>}
+                  datetime={
+                    <Text type="secondary">
+                      {moment(comment.createdAt).format("HH:mm DD/MM/YYYY")}
+                    </Text>
+                  }
+                  content={comment.content}
+                  actions={[
+                    <Button 
+                      type="text" 
+                      size="small" 
+                      onClick={() => setReplyContent((prev) => ({
+                        ...prev,
+                        [comment.commentId]: !prev[comment.commentId],
+                      }))}
+                      icon={<Icons.FaReply />}
                     >
-                      <footer class="flex justify-between items-center mb-2">
-                        <div class="flex items-center">
-                          <p class="inline-flex items-center mr-3 text-sm text-gray-900 dark:text-white font-semibold">
-                            <img
-                              class="mr-2 w-6 h-6 rounded-full"
-                              src={reply.avatar || img}
-                              alt="Jese Leos"
-                            />
-                            {reply.userName}
-                          </p>
-                          <p class="text-sm text-gray-600 dark:text-gray-400">
-                            {" "}
-                            {moment(reply?.createdAt).format(
-                              "HH:mm  DD/MM/YYYY",
-                            )}
-                          </p>
-                        </div>
-                        <button
-                          id="dropdownComment2Button"
-                          data-dropdown-toggle="dropdownComment2"
-                          onClick={() => toggleReplyDropdown(reply.replyId)}
-                          class="inline-flex items-center p-2 text-sm font-medium text-center text-gray-500 dark:text-gray-40 bg-white rounded-lg hover:bg-gray-100 focus:ring-4 focus:outline-none focus:ring-gray-50 dark:bg-gray-900 dark:hover:bg-gray-700 dark:focus:ring-gray-600"
-                          type="button"
+                      Trả lời
+                    </Button>
+                  ]}
+                />
+                
+                <div className="absolute top-4 right-4">
+                  <Popover
+                    content={
+                      <div className="action-menu">
+                        {getCommentActions(comment).map(item => (
+                          <Button 
+                            key={item.key} 
+                            type="text" 
+                            block 
+                            onClick={item.onClick} 
+                            className={`text-left ${item.danger ? 'text-red-500 hover:text-red-700' : ''}`}
+                            icon={item.icon}
+                          >
+                            {item.label}
+                          </Button>
+                        ))}
+                      </div>
+                    }
+                    trigger="click"
+                    open={activeDropdown === comment.commentId}
+                    onOpenChange={(visible) => !visible && setActiveDropdown(null)}
+                  >
+                    <Button 
+                      type="text" 
+                      shape="circle" 
+                      icon={<SettingOutlined />}
+                      onClick={() => toggleDropdown(comment.commentId)}
+                    />
+                  </Popover>
+                </div>
+                
+                {/* Form trả lời comment */}
+                {replyContent[comment.commentId] && (
+                  <div className="reply-form mt-3 pl-12">
+                    <Input
+                      placeholder="Nhập câu trả lời..."
+                      value={replyContent[comment.commentId] || ''}
+                      onChange={(e) => setReplyContent({
+                        ...replyContent,
+                        [comment.commentId]: e.target.value
+                      })}
+                      addonAfter={
+                        <Button 
+                          type="link"
+                          onClick={() => checkLoginBeforeAction(() => handleReply(comment.commentId))}
+                          size="small"
+                          className="p-0"
                         >
-                          <Icons.CiSettings />
-                          <span class="sr-only">Comment settings</span>
-                        </button>
-
-                        {activeReplyDropdown === reply.replyId && userInfo && (
-                          <div className="z-10 w-36 bg-white rounded divide-y divide-gray-100 shadow dark:bg-gray-700 dark:divide-gray-600">
-                            <ul className=" py-1 text-sm text-gray-700 dark:text-gray-200">
-                              {reply.user_id === userInfo.id && (
-                                <>
-                                  <li>
-                                    <a
-                                      className="block py-2 px-4 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white"
-                                      onClick={() => {
-                                        handleEditReplyClick(reply.replyId);
-                                      }}
-                                    >
-                                      Chỉnh sửa
-                                    </a>
-                                  </li>
-                                  <li>
-                                    <a
-                                      onClick={() =>
-                                        handleRemoveReplyComment(reply.replyId)
-                                      }
-                                      className="block py-2 px-4 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white"
-                                    >
-                                      Xóa
-                                    </a>
-                                  </li>
-                                </>
-                              )}
-                              <li>
-                                <a className="block py-2 px-4 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white">
-                                  Báo cáo
-                                </a>
-                              </li>
-                            </ul>
-                          </div>
-                        )}
-                      </footer>
-                      <p className="text-gray-500 dark:text-gray-400">
-                        {" "}
-                        <b className="underline text-blue-700">
-                          @{reply.parentReplyUserName || reply.userComment}
-                        </b>{" "}
-                        {reply.content}
-                      </p>
-                      <button
-                        onClick={() =>
-                          setReplyToReplyContent((prev) => ({
-                            ...prev,
-                            [reply.replyId]: !prev[reply.replyId],
-                          }))
+                          <SendOutlined />
+                        </Button>
+                      }
+                    />
+                  </div>
+                )}
+                
+                {/* Form chỉnh sửa comment */}
+                {editCommentId === comment.commentId && (
+                  <div className="edit-form mt-3">
+                    <Input.TextArea
+                      value={editedComment}
+                      onChange={(e) => setEditedComment(e.target.value)}
+                      placeholder="Chỉnh sửa bình luận..."
+                      autoSize={{ minRows: 2, maxRows: 4 }}
+                    />
+                    <Button
+                      type="primary"
+                      onClick={() => checkLoginBeforeAction(() => handleUpdateComment(comment.commentId))}
+                      className="mt-2"
+                      size="small"
+                    >
+                      Lưu thay đổi
+                    </Button>
+                  </div>
+                )}
+                
+                {/* Danh sách reply */}
+                <div className="replies pl-12 mt-3">
+                  {comment.replyResponse.map((reply) => (
+                    <Card 
+                      key={reply.replyId} 
+                      className="reply-item mb-2 transition-shadow hover:shadow-sm"
+                      size="small"
+                      bordered={false}
+                      bodyStyle={{ padding: '12px' }}
+                    >
+                      <CustomComment
+                        avatar={<Avatar src={reply.avatar || img} alt={reply.userName} size="small" />}
+                        author={<Text strong>{reply.userName}</Text>}
+                        datetime={
+                          <Text type="secondary" className="text-xs">
+                            {moment(reply.createdAt).format("HH:mm DD/MM/YYYY")}
+                          </Text>
                         }
-                        className="flex items-center text-sm mt-2 text-gray-500 hover:underline dark:text-gray-400 font-medium"
-                      >
-                        <Icons.FaReply /> Trả lời
-                      </button>
-
-                      {/* Hiển thị form trả lời reply */}
-                      {replyToReplyContent[reply.replyId] && (
-                        <div>
-                          <input
+                        content={
+                          <Text>
+                            <Text type="secondary" strong className="text-blue-500 mr-1">
+                              @{reply.parentReplyUserName || reply.userComment}
+                            </Text>
+                            {reply.content}
+                          </Text>
+                        }
+                        actions={[
+                          <Button 
                             type="text"
-                            placeholder="Nhập câu trả lời..."
-                            className="border rounded w-full p-2"
-                            onChange={(e) =>
-                              setReplyToReplyContent({
-                                ...replyToReplyContent,
-                                [reply.replyId]: e.target.value,
-                              })
-                            }
-                          />
-                          <button
-                            onClick={() =>
-                              checkLoginBeforeAction(() =>
-                                handleReplyToReply(
-                                  comment.commentId,
-                                  reply.replyId,
-                                ),
-                              )
-                            }
-                            className="mt-2 text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5"
+                            size="small"
+                            onClick={() => setReplyToReplyContent((prev) => ({
+                              ...prev,
+                              [reply.replyId]: !prev[reply.replyId],
+                            }))}
+                            icon={<Icons.FaReply />}
                           >
                             Trả lời
-                          </button>
+                          </Button>
+                        ]}
+                      />
+                      
+                      <div className="absolute top-2 right-2">
+                        <Popover
+                          content={
+                            <div className="action-menu">
+                              {getReplyActions(reply).map(item => (
+                                <Button 
+                                  key={item.key} 
+                                  type="text" 
+                                  block 
+                                  onClick={item.onClick} 
+                                  className={`text-left ${item.danger ? 'text-red-500 hover:text-red-700' : ''}`}
+                                  icon={item.icon}
+                                >
+                                  {item.label}
+                                </Button>
+                              ))}
+                            </div>
+                          }
+                          trigger="click"
+                          open={activeReplyDropdown === reply.replyId}
+                          onOpenChange={(visible) => !visible && setActiveReplyDropdown(null)}
+                        >
+                          <Button 
+                            type="text" 
+                            shape="circle" 
+                            size="small"
+                            icon={<SettingOutlined />}
+                            onClick={() => toggleReplyDropdown(reply.replyId)}
+                          />
+                        </Popover>
+                      </div>
+                      
+                      {/* Form trả lời reply */}
+                      {replyToReplyContent[reply.replyId] && (
+                        <div className="reply-to-reply-form mt-2">
+                          <Input
+                            placeholder="Nhập câu trả lời..."
+                            value={replyToReplyContent[reply.replyId] || ''}
+                            onChange={(e) => setReplyToReplyContent({
+                              ...replyToReplyContent,
+                              [reply.replyId]: e.target.value,
+                            })}
+                            size="small"
+                            addonAfter={
+                              <Button 
+                                type="link"
+                                onClick={() => checkLoginBeforeAction(() => handleReplyToReply(comment.commentId, reply.replyId))}
+                                size="small"
+                                className="p-0"
+                              >
+                                <SendOutlined />
+                              </Button>
+                            }
+                          />
                         </div>
                       )}
+                      
+                      {/* Form chỉnh sửa reply */}
                       {editReplyId === reply.replyId && (
-                        <div>
-                          <input
-                            type="text"
+                        <div className="edit-reply-form mt-2">
+                          <Input.TextArea
                             value={editedReply}
-                            placeholder="Chỉnh sửa câu trả lời..."
-                            className="border rounded w-full p-2"
                             onChange={(e) => setEditedReply(e.target.value)}
+                            placeholder="Chỉnh sửa câu trả lời..."
+                            autoSize={{ minRows: 2, maxRows: 4 }}
+                            size="small"
                           />
-                          <button
-                            onClick={() =>
-                              checkLoginBeforeAction(() =>
-                                handleUpdateReply(reply.replyId),
-                              )
-                            }
-                            className="mt-2 text-white bg-green-700 hover:bg-green-800 font-medium rounded-lg text-sm px-5 py-2.5"
+                          <Button
+                            type="primary"
+                            size="small"
+                            onClick={() => checkLoginBeforeAction(() => handleUpdateReply(reply.replyId))}
+                            className="mt-2"
                           >
                             Lưu thay đổi
-                          </button>
+                          </Button>
                         </div>
                       )}
-                    </article>
+                    </Card>
                   ))}
                 </div>
-              ))}
-        </div>
-      </section>
+              </Card>
+            </List.Item>
+          )}
+        />
+      </Card>
     </div>
   );
 };

@@ -1,106 +1,133 @@
+import React, { useEffect, useState } from "react";
+import { 
+  Form, 
+  Input, 
+  Button, 
+  notification, 
+  Typography, 
+  Space, 
+  Divider 
+} from "antd";
 import { createCategoryBlog, updateCategoryBlog } from "apis/categoryBlog.api";
-import { useForm } from "react-hook-form";
 import { useDispatch } from "react-redux";
 import { changeLoading } from "store/slicers/common.slicer";
 import logo from "assets/images/logo.jpg";
-import InputForm from "components/InputForm";
 import MarkdownEditor from "components/MarkdownEditor";
-import { useEffect, useState } from "react";
-import { notification } from "antd";
+
+const { Title } = Typography;
+const { TextArea } = Input;
 
 function CategoryBlogForm({ closeModal, fetchData, categoryBlogCurrent }) {
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-    setValue,
-    reset,
-  } = useForm();
-
+  const [form] = Form.useForm();
   const dispatch = useDispatch();
   const [description, setDescription] = useState("");
 
   useEffect(() => {
-    console.log(categoryBlogCurrent);
+    // Reset form khi component mount
+    form.resetFields();
+    setDescription("");
 
+    // Fill dữ liệu vào form nếu đang edit
     if (categoryBlogCurrent) {
-      setValue("name", categoryBlogCurrent.name);
+      form.setFieldsValue({
+        name: categoryBlogCurrent.name,
+      });
       setDescription(categoryBlogCurrent.description || "");
     }
-  }, [categoryBlogCurrent, setValue]);
+  }, [categoryBlogCurrent, form]);
 
-  const handleResetForm = () => {
-    reset();
-  };
-  const handleUpdate = async (data) => {
+  const handleSubmit = async (values) => {
     dispatch(changeLoading());
 
     try {
-      const categoryBlogData = { ...data, description };
+      const categoryBlogData = { 
+        ...values, 
+        description 
+      };
 
       if (categoryBlogCurrent) {
         await updateCategoryBlog(
-          categoryBlogCurrent?.categoryBlogId,
+          categoryBlogCurrent.categoryBlogId,
           categoryBlogData,
         );
         notification.success({
-          message: "Cập nhật thành công",
+          message: "Cập nhật danh mục thành công",
+          description: `Danh mục ${values.name} đã được cập nhật`
         });
       } else {
         await createCategoryBlog(categoryBlogData);
         notification.success({
-          message: "Tạo thành công CategoryBlog",
+          message: "Tạo danh mục thành công",
+          description: `Danh mục ${values.name} đã được tạo`
         });
       }
       fetchData();
       closeModal();
     } catch (error) {
-      console.log("lỗi categoryBlogData :", error);
+      notification.error({
+        message: "Thao tác không thành công",
+        description: error.message || "Đã xảy ra lỗi, vui lòng thử lại"
+      });
     } finally {
       dispatch(changeLoading());
     }
   };
 
   return (
-    <div className="flex flex-col justify-center items-center  ">
-      <div className="flex flex-col justify-center  w-full items-center ">
-        <img src={logo} alt="logo" className="w-20 object-contain" />
-        <h2 className="text-center border border-y-main w-full bg-light text-white">
-          {categoryBlogCurrent ? `Edit categoryBlog` : "Create categoryBlog"}
-        </h2>
+    <div className="category-blog-form">
+      <div style={{ textAlign: "center", marginBottom: 24 }}>
+        <Space direction="vertical" align="center">
+          <img src={logo} alt="logo" style={{ width: 80, height: "auto" }} />
+          <Title level={4}>
+            {categoryBlogCurrent ? "Chỉnh sửa danh mục" : "Tạo danh mục mới"}
+          </Title>
+        </Space>
       </div>
 
-      <form
-        onSubmit={handleSubmit(handleUpdate)}
-        className="flex flex-col w-full gap-2 mt-2"
+      <Form
+        form={form}
+        layout="vertical"
+        onFinish={handleSubmit}
+        initialValues={{ name: "" }}
       >
-        <InputForm
-          errors={errors}
-          id={"name"}
-          register={register}
-          fullWidth
-          validate={{
-            required: `Require this field`,
-          }}
-        />
-        <MarkdownEditor
-          height={200}
-          label={"Description : "}
-          name={"description"}
-          id={"description"}
-          value={description}
-          register={register}
-          validate={{}}
-          errors={errors}
-          setValue={setDescription}
-        />
-        <button
-          className="w-full p-2 bg-light text-lg text-white "
-          type="submit"
+        <Form.Item
+          name="name"
+          label="Tên danh mục"
+          rules={[
+            { 
+              required: true, 
+              message: "Vui lòng nhập tên danh mục" 
+            },
+            {
+              min: 2,
+              message: "Tên danh mục phải có ít nhất 2 ký tự"
+            }
+          ]}
         >
-          {categoryBlogCurrent ? `Update` : "Create"}
-        </button>
-      </form>
+          <Input placeholder="Nhập tên danh mục" />
+        </Form.Item>
+
+        <Divider orientation="left">Mô tả</Divider>
+
+        <Form.Item label="Mô tả danh mục">
+          <MarkdownEditor
+            height={300}
+            value={description}
+            setValue={setDescription}
+          />
+        </Form.Item>
+
+        <Form.Item>
+          <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 16 }}>
+            <Button onClick={closeModal}>
+              Hủy
+            </Button>
+            <Button type="primary" htmlType="submit">
+              {categoryBlogCurrent ? "Cập nhật" : "Tạo mới"}
+            </Button>
+          </div>
+        </Form.Item>
+      </Form>
     </div>
   );
 }

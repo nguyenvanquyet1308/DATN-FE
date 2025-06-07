@@ -12,7 +12,7 @@ const Navigation = () => {
                 h-[100vh]
                 sticky top-0 flex flex-col min-h-screen text-white overflow-y-scroll 
             select-none 
-                ${nav ? "active w-[20%]" : "w-[6%]"}  `}
+                  `}
     >
       <div
         className={`absolute z-10 right-1 top-0 ml-auto text-lg h-9 flex justify-center items-center  ${
@@ -34,7 +34,7 @@ const Navigation = () => {
           alt="user-img"
           className="h-[40px] w-[40px] rounded-full object-cover aspect-auto"
         />
-        {nav && <span>DATN</span>}
+        {nav && <span>Trang quản lý</span>}
       </header>
       <div class="flex flex-col gap-2">
         {menuAdminSidebar.map((el) => (
